@@ -66,6 +66,8 @@ kbd{display:inline-block;min-width:22px;text-align:center;background:#2b2540;col
 #settings{position:fixed;inset:0;z-index:32;display:grid;place-items:center;background:rgba(43,37,64,.55)}
 #settings .card{position:static;width:min(760px,94vw);max-height:90vh;overflow:auto;padding:22px 26px}
 #settings h2{margin:0 0 4px;font:900 28px "Nunito",system-ui}
+.shead{position:sticky;top:-22px;margin:-22px -26px 4px;padding:16px 26px 10px;background:#fffaf0;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:3;border-bottom:1px solid #eee4d6}.shead h2{margin:0!important}
+#sx{flex:none;width:40px;height:40px;border:0;border-radius:12px;background:#2b2540;color:#fff;font:900 18px system-ui;cursor:pointer}
 #settings h3{margin:16px 0 6px;font:900 15px "Nunito",system-ui;text-transform:uppercase;letter-spacing:.06em;opacity:.6}
 .sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 22px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #eee4d6}
@@ -114,7 +116,7 @@ body.touch #attrib{display:none}
 @media (max-height:430px){body.touch #tGas{width:84px;height:118px}body.touch #tBrake{width:84px;height:84px}body.touch #tHb,body.touch #tHorn{right:calc(208px + env(safe-area-inset-right));width:64px}body.touch #steerPad{height:104px}body.touch #steerKnob{width:72px;height:72px;margin:-36px 0 0 -36px}body.touch #mini{width:96px;height:96px;top:calc(56px + env(safe-area-inset-top))}}
 @media (max-height:520px),(max-width:700px){
  #start .card{max-height:92vh;overflow:auto;padding:18px 20px;width:min(520px,94vw)}#start h1{font-size:34px}#start p{font-size:13px}
- #settings .card{padding:14px 16px;max-height:94vh}.sg{grid-template-columns:1fr}#settings h2{font-size:22px}
+ #settings .card{padding:14px 16px;max-height:94vh}.shead{top:-14px;margin:-14px -16px 4px;padding:10px 16px 8px}.sg{grid-template-columns:1fr}#settings h2{font-size:22px}
  #garage .card{padding:14px}#mapapp{inset:8px}
  #tb button{width:40px;height:40px;font-size:19px}
  #mark,#stars{top:58px}#money{top:118px}#mission{top:160px}#route{top:62px}
@@ -138,7 +140,7 @@ body.touch #attrib{display:none}
 <div id="rotate" class="pill hide">Fordítsd fekvőbe a telefont a jobb irányításhoz ↻</div>
 <div id="limit" class="hide"></div><div id="stars" class="pill hide"></div><div id="money" class="pill hide"></div><div id="mission" class="pill hide"></div><div id="mark" class="pill hide"></div>
 <div id="speed" class="pill"><span id="cruise"></span><b id="kmh">0</b><span id="cname">km/h</span></div>
-<div id="settings" class="hide"><div class="card pill"><button id="sx" aria-label="Bezárás" style="position:sticky;top:0;float:right;width:40px;height:40px;border:0;border-radius:12px;background:#2b2540;color:#fff;font:900 18px system-ui;cursor:pointer;z-index:2">✕</button><h2>Beállítások</h2><div id="setbody"></div><p style="margin:16px 0 0"><button class="btn" id="sclose">Vissza a vezetéshez (O)</button> <button class="btn alt" id="sreset">Alapértékek</button></p></div></div>
+<div id="settings" class="hide"><div class="card pill"><div class="shead"><h2>Beállítások</h2><button id="sx" aria-label="Bezárás">✕</button></div><div id="setbody"></div><p style="margin:16px 0 0"><button class="btn" id="sclose">Vissza a vezetéshez (O)</button> <button class="btn alt" id="sreset">Alapértékek</button></p></div></div>
 <div id="radio" class="pill hide"></div><div id="fps" class="hide"></div><div id="attrib" class="hide">Utcafotók, homlokzatszínek és táblák: © Mapillary közreműködők, CC BY-SA</div>
 <div id="garage" class="hide"><div class="card pill"><h2>Garázs</h2><div id="cars"></div><div id="cols"><span>Szín:</span></div><button class="btn" id="gclose">Indulás ezzel (G)</button></div></div>
 <div id="mapapp">
