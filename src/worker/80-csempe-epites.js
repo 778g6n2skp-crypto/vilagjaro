@@ -463,6 +463,27 @@ async function build(tx,ty,g,rebuild){
    L.ln.corr=d=>{let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(D[m]<=d)lo=m;else hi=m;}const f=Math.max(0,Math.min(1,(d-D[lo])/((D[hi]-D[lo])||1)));return cr[lo]*(1-f)+cr[hi]*f;};}}
  const GADJ=[];
  // először a hidak magassága: végpontok
+ // ---- csomópontok: a találkozó utak visszavágása és közös csomópont-felület ----
+ const cutLine=(P,D,s0,s1)=>{const P2=[],D2=[];const at=s=>{let k=0;while(k<D.length-2&&D[k+1]<s)k++;const f=Math.max(0,Math.min(1,(s-D[k])/((D[k+1]-D[k])||1)));return[P[k][0]+(P[k+1][0]-P[k][0])*f,P[k][1]+(P[k+1][1]-P[k][1])*f];};
+  P2.push(at(s0));D2.push(s0);for(let k=0;k<P.length;k++)if(D[k]>s0+.05&&D[k]<s1-.05){P2.push(P[k]);D2.push(D[k]);}P2.push(at(s1));D2.push(s1);return[P2,D2];};
+ const keepIv=(tot,cuts,ext)=>{const C=cuts.map(([a,b])=>[Math.max(0,a-(a>0?ext:0)),Math.min(tot,b+(b<tot?ext:0))]).sort((p,q)=>p[0]-q[0]),out=[];let cur=0;for(const [a,b] of C){if(a-cur>.3)out.push([cur,a]);cur=Math.max(cur,b);}if(tot-cur>.3)out.push([cur,tot]);return out;};
+ const JN=new Map(),JPOL=[],jck=q=>Math.round(q[0]*2)*1000003+Math.round(q[1]*2);
+ for(const ln of lines){const pr=ln.pr,c=pr.class;if(isRailC(c)||/_construction$/.test(c)||pr.brunnel||c==='ferry'||c==='pier'||c==='aerialway'||pr.level<0||c==='path')continue;let wd=roadW(pr);if(!wd)continue;
+  const P=ln.L;if(P.length<2)continue;const D=cum(P);if(D[D.length-1]<.5)continue;const cls=/^(motorway|trunk|primary|secondary|tertiary)$/.test(c)?0:1;
+  ln.tg=dHw.length?matchOSM(P):null;const lanes=ln.tg?lanesOf(ln.tg.t):0;if(lanes)wd=Math.max(wd*.75,lanes*3.2+(cls===0?.6:.3));ln.jhw=wd/2;ln.jD=D;ln.jt=[];
+  for(let i=0;i<P.length;i++){const k=jck(P[i]);let j=JN.get(k);if(!j)JN.set(k,j={x:P[i][0],z:P[i][1],deg:0,arms:[]});j.deg+=(i===0||i===P.length-1)?1:2;j.arms.push([ln,i]);}}
+ for(const j of JN.values()){if(j.deg<3)continue;const arms=[];
+  for(const [ln,i] of j.arms){const P=ln.L,D=ln.jD;for(const dir of [-1,1]){if(i+dir<0||i+dir>=P.length)continue;let k=i+dir;while(k>0&&k<P.length-1&&Math.abs(D[k]-D[i])<4)k+=dir;
+    let ux=P[k][0]-j.x,uz=P[k][1]-j.z;const ul=Math.hypot(ux,uz);if(ul<.1)continue;ux/=ul;uz/=ul;let av=dir>0?D[P.length-1]-D[i]:D[i];
+    for(let m=i+dir;m>=0&&m<P.length;m+=dir){const jj=JN.get(jck(P[m]));if(jj&&jj.deg>=3&&jj!==j){av=Math.abs(D[m]-D[i])/2;break;}}
+    arms.push({ln,s:D[i],dir,ux,uz,hw:ln.jhw,av,trim:0,a:Math.atan2(uz,ux)});}}
+  if(arms.length<3)continue;arms.sort((p,q)=>p.a-q.a);const n=arms.length,K=new Array(n).fill(null);
+  for(let a=0;a<n;a++){const A=arms[a],B=arms[(a+1)%n];let da=B.a-A.a;if(da<=0)da+=2*Math.PI;if(da>Math.PI*.9)continue;
+   const px=j.x-A.uz*A.hw,pz=j.z+A.ux*A.hw,qx=j.x+B.uz*B.hw,qz=j.z-B.ux*B.hw,det=A.ux*(-B.uz)+A.uz*B.ux;if(Math.abs(det)<1e-4)continue;
+   const rx=qx-px,rz=qz-pz,t=(rx*(-B.uz)+rz*B.ux)/det,s2=(A.ux*rz-A.uz*rx)/det;if(t<-.5||s2<-.5)continue;const capT=Math.min(16,2.6*Math.max(A.hw,B.hw)+3);if(t>capT*1.6||s2>capT*1.6)continue;const tt=Math.min(Math.max(0,t),capT),ss=Math.min(Math.max(0,s2),capT);// hegyesszögű csomópontnál nincs óriás folt
+   A.trim=Math.max(A.trim,tt+.5);B.trim=Math.max(B.trim,ss+.5);K[a]=[px+A.ux*tt,pz+A.uz*tt,tt,ss];}
+  for(const A of arms){A.trim=Math.min(A.trim,A.av*.9,25);if(A.trim<.4)A.trim=0;else A.ln.jt.push(A.dir>0?[A.s,A.s+A.trim]:[A.s-A.trim,A.s]);}
+  JPOL.push({j,arms,K});}
  for(const ln of lineOrder){const pr=ln.pr,c=pr.class,sub=pr.subclass;
   if(/_construction$/.test(c)||pr.brunnel==='tunnel'||c==='ferry'||c==='pier'||c==='aerialway'||pr.level<0)continue;
   const bridge=pr.brunnel==='bridge',layer=+pr.layer||0,P=ln.L,D=cum(P),tot=D[D.length-1];if(tot<.5)continue;
@@ -479,19 +500,23 @@ async function build(tx,ty,g,rebuild){
     if(bridge&&!onRd)bridgeSides(run,1.9);else if(rfR&&!onRd)rampSides(run,1.9,tram?.12:.1);});continue;}
   let wd=roadW(pr);if(!wd)continue;
   const cls=c==='path'?2:/^(motorway|trunk|primary|secondary|tertiary)$/.test(c)?0:1;
-  const tg=cls<2&&dHw.length?matchOSM(P):null,lanes=tg?lanesOf(tg.t):0,spd=tg?spdOf(tg.t):0;
+  const tg=ln.tg!==undefined?ln.tg:(cls<2&&dHw.length?matchOSM(P):null),lanes=tg?lanesOf(tg.t):0,spd=tg?spdOf(tg.t):0;
   const hwT=tg?tg.t.highway||'':'',rank=({motorway:0,trunk:1,primary:2,secondary:3,tertiary:4,minor:5,service:6,track:7})[c]??6.5,rankF=rank===5&&/living_street/.test(hwT)?6:rank===5&&/unclassified/.test(hwT)?4.6:pr.ramp&&rank<3?rank+.5:rank;
   if(lanes)wd=Math.max(wd*.75,lanes*3.2+(cls===0?.6:.3));const hw=wd/2;
   const off=[.16,.14,.07][cls],rf=bridge?null:(ln.rf!==undefined?ln.rf:rampFor(P,D,false,hw)),yAt0=bridge?deck0:rf?p=>Math.max(HS(p[0],p[1])+off,rf(p[2])):p=>HS(p[0],p[1])+off,yAt=cF?p=>yAt0(p)+cF(p[2]):yAt0;
   const ow=+pr.oneway||0,mid=P[Math.floor(P.length/2)],ni=nameAt(mid[0],mid[1])||nameAt(P[0][0],P[0][1]);
   const walk=cls<2&&!bridge&&!/motorway|trunk/.test(c)&&c!=='service'&&c!=='track'&&!pr.ramp;
   let sides=tg?sideOf(tg.t):null;if(sides&&tg.rev)sides=[sides[1],sides[0]];
-  runs(P,D,8,6,run=>{const Ed=ribbon(R[cls],run,hw,yAt);
-   if(!bridge)markings(run,hw,cls,ow,lanes);
+  const trimJ=!bridge&&ln.jt&&ln.jt.length>0;if(!bridge){ln.yF=yAt;ln.dHw2=hw;ln.dCls=cls;}
+  const swOf=run=>{let sw=[0,0];if(walk){const a=run[Math.floor(run.length/2)],b=run[Math.min(run.length-1,Math.floor(run.length/2)+1)];let ux=b[0]-a[0],uz=b[1]-a[1];const ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;const nx=-uz,nz=ux;
+    if(sides)sw=sides.slice();else sw=[nearSW(a[0]-nx*(hw+3),a[1]-nz*(hw+3),4.5)?0:1,nearSW(a[0]+nx*(hw+3),a[1]+nz*(hw+3),4.5)?0:1];}return sw;};
+  const swY=rf?p=>Math.max(HS(p[0],p[1])+.09,p[3]-.05):p=>HS(p[0],p[1])+.09;
+  runs(P,D,8,6,run=>{let Ed=null;if(trimJ){for(const q of run)q[3]=yAt(q);}else{Ed=ribbon(R[cls],run,hw,yAt);
+   if(!bridge)markings(run,hw,cls,ow,lanes);}
    let sw=[0,0];
    if(walk){const a=run[Math.floor(run.length/2)],b=run[Math.min(run.length-1,Math.floor(run.length/2)+1)];let ux=b[0]-a[0],uz=b[1]-a[1];const ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;const nx=-uz,nz=ux;
     if(sides)sw=sides.slice();else sw=[nearSW(a[0]-nx*(hw+3),a[1]-nz*(hw+3),4.5)?0:1,nearSW(a[0]+nx*(hw+3),a[1]+nz*(hw+3),4.5)?0:1];
-    const swY=rf?p=>Math.max(HS(p[0],p[1])+.09,p[3]-.05):p=>HS(p[0],p[1])+.09;if(sw[0])ribbon(SW,run,1.3,swY,-(hw+1.3),10,true);if(sw[1])ribbon(SW,run,1.3,swY,hw+1.3,10,true);}
+    if(!trimJ){if(sw[0])ribbon(SW,run,1.3,swY,-(hw+1.3),10,true);if(sw[1])ribbon(SW,run,1.3,swY,hw+1.3,10,true);}}
    if(cF&&!bridge)for(const q of run){const cv=cF(q[2]);if(Math.abs(cv)>.35)GADJ.push(q[0],q[1],q[3]-.12,hw+(sw[0]||sw[1]?2.6:0),cv);}
    if(rf&&!bridge){rampSides(run,hw+(sw[0]||sw[1]?2.6:0),off);for(const q of run){const rs=q[3]-(HS(q[0],q[1])+off);if(rs>.25)EMB.push(q[0],q[1],q[3]-.12,hw+(sw[0]||sw[1]?2.6:0),rs);}}
    for(let k=1;k<run.length;k++){const a=run[k-1],b=run[k];rseg.push(a[0],a[1],a[3],b[0],b[1],b[3],hw,bridge?1:0,ni,cls,ow,lanes,spd,rankF);rgAdd(rseg.length-14);thAdd(a[0],a[1],b[0],b[1],hw+.3);
@@ -500,7 +525,16 @@ async function build(tx,ty,g,rebuild){
       if(!inBld(lx,lz)&&!onRoad(lx,lz,.6))lamps.push(lx,H(lx,lz),lz,Math.atan2(-nx*sd,-nz*sd));}
      if(Math.floor(a[2]/13)!==Math.floor(b[2]/13))for(const sd of [-1,1]){if(!sw[sd>0?1:0]||rnd()>.72)continue;const x=b[0]+nx*sd*(hw+1.4),z=b[1]+nz*sd*(hw+1.4);if(!nearTree(x,z,14))sTrees.push(x,z);}}}
    if(bridge)bridgeSides(run,hw,Ed);});
+  // csomópontnál visszavágott látható burkolat, felfestés és járda; a csomópontot közös felület fedi
+  if(trimJ){const tot2=D[D.length-1];for(const [s0,s1] of keepIv(tot2,ln.jt,0)){const [P2,D2]=cutLine(P,D,s0,s1);if(P2.length<2)continue;runs(P2,D2,8,6,run=>{ribbon(R[cls],run,hw,yAt);markings(run,hw,cls,ow,lanes);});}
+   if(walk)for(const [s0,s1] of keepIv(tot2,ln.jt,2.8)){const [P2,D2]=cutLine(P,D,s0,s1);if(P2.length<2)continue;runs(P2,D2,8,6,run=>{for(const q of run)q[3]=yAt(q);const sw=swOf(run);if(sw[0])ribbon(SW,run,1.3,swY,-(hw+1.3),10,true);if(sw[1])ribbon(SW,run,1.3,swY,hw+1.3,10,true);});}}
   if(prof)decorBridge(prof,names[ni]||'',hw,tg?tg.t['bridge:structure']||'':'');}
+ for(const J of JPOL){const {j,arms,K}=J;if(!inC(j.x,j.z))continue;if(arms.some(A=>!A.ln.yF))continue;let cm=1;for(const A of arms)cm=Math.min(cm,A.ln.dCls??1);const B=R[cm],n=arms.length,pts=[];
+  const yA=(A,t)=>A.ln.yF([j.x+A.ux*t,j.z+A.uz*t,A.s+A.dir*t]);let yc=0;for(const A of arms)yc+=yA(A,0);yc/=n;
+  for(let a=0;a<n;a++){const A=arms[a],h=A.ln.dHw2||A.hw,t=A.trim,y=yA(A,t);pts.push([j.x+A.ux*t+A.uz*h,j.z+A.uz*t-A.ux*h,y],[j.x+A.ux*t-A.uz*h,j.z+A.uz*t+A.ux*h,y]);
+   const k=K[a],Bn=arms[(a+1)%n];if(k&&k[2]<=A.trim+.01&&k[3]<=Bn.trim+.01)pts.push([k[0],k[1],(y+yA(Bn,Bn.trim))/2]);}
+  const b0=B.p.length/3;B.p.push(j.x,yc+.006,j.z);B.u.push(j.x/14,j.z/14);for(const q of pts){B.p.push(q[0],q[2]+.006,q[1]);B.u.push(q[0]/14,q[1]/14);}
+  for(let k=0;k<pts.length;k++){const a=b0+1+k,b=b0+1+(k+1)%pts.length;const p1=pts[k],p2=pts[(k+1)%pts.length],cr=(p1[0]-j.x)*(p2[1]-j.z)-(p1[1]-j.z)*(p2[0]-j.x);if(cr<0)B.i.push(b0,a,b);else B.i.push(b0,b,a);}}
  function markings(run,hw,cls,ow,lanes){if(cls>1||hw<2.4)return;const y=p=>p[3]+.02;
   const L=lanes||(ow?(hw*2>6.5?2:1):(hw*2>=5.8?2:1)),lw=2*hw/L,line=(o,dash)=>ribbon(dash?MD:MS,run,.075,y,o,6,true);
   if(ow){for(let i=1;i<L;i++)line(-hw+i*lw,true);}
