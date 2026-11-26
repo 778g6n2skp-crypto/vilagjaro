@@ -170,14 +170,28 @@ const fx2lon=fx=>fx/NT*360-180;
 const fy2lat=fy=>Math.atan(Math.sinh(Math.PI*(1-2*fy/NT)))*180/Math.PI;
 
 /* ---------- domborzat ---------- */
-const DZ=14,tilesP=new Map(),tileD=new Map();let fb=null,fbS=0,fbN=0,demMiss=false;
+let DEMDEC='';const DZ=14,tilesP=new Map(),tileD=new Map();let fb=null,fbS=0,fbN=0,demMiss=false;
 function dxy(lat,lon){const n=1<<DZ;return[lon2fx(lon)/NT*n,lat2fy(lat)/NT*n];}
+// saját PNG-dekóder a domborzati csempékhez: bájtpontos, böngészőtől és színkezeléstől független (iPhone-on is)
+async function pngRGB(B){if(typeof DecompressionStream==='undefined')return null;const dv=new DataView(B.buffer,B.byteOffset,B.byteLength);if(dv.getUint32(0)!==0x89504e47)return null;
+ let p=8,W=0,Hh=0,ct=0,bd=0,il=0;const parts=[];while(p<B.length){const len=dv.getUint32(p),ty=String.fromCharCode(B[p+4],B[p+5],B[p+6],B[p+7]);
+  if(ty==='IHDR'){W=dv.getUint32(p+8);Hh=dv.getUint32(p+12);bd=B[p+16];ct=B[p+17];il=B[p+20];}else if(ty==='IDAT')parts.push(B.subarray(p+8,p+8+len));else if(ty==='IEND')break;p+=12+len;}
+ if(bd!==8||il!==0||(ct!==2&&ct!==6)||W!==256||Hh!==256)return null;const bpp=ct===6?4:3;
+ const raw=new Uint8Array(await new Response(new Blob(parts).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+ const st=W*bpp,out=new Uint8Array(W*Hh*3),prev=new Uint8Array(st),cur=new Uint8Array(st);let o=0;
+ for(let y=0;y<Hh;y++){const f=raw[o++];for(let x=0;x<st;x++){const a=x>=bpp?cur[x-bpp]:0,b=prev[x],c=x>=bpp?prev[x-bpp]:0,v=raw[o++];let r;
+   if(f===0)r=v;else if(f===1)r=v+a;else if(f===2)r=v+b;else if(f===3)r=v+((a+b)>>1);else{const pp=a+b-c,pa=Math.abs(pp-a),pb=Math.abs(pp-b),pc=Math.abs(pp-c);r=v+(pa<=pb&&pa<=pc?a:pb<=pc?b:c);}cur[x]=r&255;}
+  for(let x=0;x<W;x++){out[(y*W+x)*3]=cur[x*bpp];out[(y*W+x)*3+1]=cur[x*bpp+1];out[(y*W+x)*3+2]=cur[x*bpp+2];}prev.set(cur);}
+ return out;}
 function loadDem(x,y){const k=x+'/'+y;let p=tilesP.get(k);if(p)return p;
  p=(async()=>{for(let a=0;a<3;a++){try{
   const r=await fetch('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/'+DZ+'/'+x+'/'+y+'.png');if(!r.ok)throw 0;
-  const bm=await createImageBitmap(await r.blob()),c=new OffscreenCanvas(256,256),g=c.getContext('2d',{willReadFrequently:true});
-  g.drawImage(bm,0,0);const d=g.getImageData(0,0,256,256).data,h=new Float32Array(65536);let s=0;
-  for(let i=0;i<65536;i++){h[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;s+=h[i];}
+  const buf=new Uint8Array(await r.arrayBuffer());let px=null;try{px=await pngRGB(buf);}catch(e){px=null;}DEMDEC=px?'saját PNG-dekóder':'vászon';
+  if(!px){// tartalék: vászon, színkezelés nélkül (Safari különben „szépíti” a színeket, és elcsúsznak a magasságok)
+   const bm=await createImageBitmap(new Blob([buf],{type:'image/png'}),{colorSpaceConversion:'none',premultiplyAlpha:'none'}),c=new OffscreenCanvas(256,256),g=c.getContext('2d',{willReadFrequently:true,colorSpace:'srgb'});
+   g.drawImage(bm,0,0);const d=g.getImageData(0,0,256,256).data;px=new Uint8Array(65536*3);for(let i=0;i<65536;i++){px[i*3]=d[i*4];px[i*3+1]=d[i*4+1];px[i*3+2]=d[i*4+2];}}
+  const h=new Float32Array(65536);let s=0;
+  for(let i=0;i<65536;i++){h[i]=px[i*3]*256+px[i*3+1]+px[i*3+2]/256-32768;s+=h[i];}
   fbS+=s/65536;fbN++;fb=fbS/fbN;tileD.set(k,h);return h;}catch(e){await sleep(600*(a+1));}}tileD.set(k,null);return null;})();
  tilesP.set(k,p);return p;}
 function dem(lat,lon){const f=dxy(lat,lon),tx=Math.floor(f[0]),ty=Math.floor(f[1]),k=tx+'/'+ty;
@@ -1055,7 +1069,7 @@ async function build(tx,ty,g,rebuild){
   ground:{p:F32(gp),c:F32(gc),u:F32(gu),i:U32(gi),nV},roads:R.map(b=>({p:F32(b.p),u:F32(b.u),i:U32(b.i)})),walk:{p:F32(SW.p),u:F32(SW.u),i:U32(SW.i)},
   bed:{p:F32(BED.p),i:U32(BED.i)},rail:{p:F32(RAIL.p),i:U32(RAIL.i)},bridge:{p:F32(BR.p),n:F32(BR.n)},
   wu:{p:F32(WU.p),n:F32(WU.n),u:F32(WU.u),c:F32(WU.c)},wg:{p:F32(WG.p),n:F32(WG.n),u:F32(WG.u),c:F32(WG.c)},roofs:{p:F32(RF.p),n:F32(RF.n),c:F32(RF.c)},
-  water:{p:F32(WA.p),i:U32(WA.i)},trees:F32(TR),lamps:F32(lamps),shs:F32(SHS),shn:SHN,fdbg:FUELP.map(f=>[+f.x.toFixed(1),+f.z.toFixed(1),f.mode||0,f.n,inBld(f.x,f.z)?1:0,f.dbgB||null,f.why||null]),rseg:F32(rseg),tseg:F32(tseg),cseg:F32(cseg),names,marks,rebuild:!!rebuild,ms:{p:F32(MS.p),i:U32(MS.i)},md:{p:F32(MD.p),u:F32(MD.u),i:U32(MD.i)},sig:F32(SG),sigN:F32(sigN),bx:{p:F32(BX.p),n:F32(BX.n),c:F32(BX.c)},wmo:{p:F32(WM.p),n:F32(WM.n),u:F32(WM.u),c:F32(WM.c)},wbr:{p:F32(WK.p),n:F32(WK.n),u:F32(WK.u),c:F32(WK.c)},style:ST.key,bidx:F32(bIdx),bunk:F32(BU),fac:F32(FAC),wpa:{p:F32(WP.p),n:F32(WP.n),u:F32(WP.u),c:F32(WP.c)}};
+  water:{p:F32(WA.p),i:U32(WA.i)},trees:F32(TR),lamps:F32(lamps),demdec:DEMDEC,shs:F32(SHS),shn:SHN,fdbg:FUELP.map(f=>[+f.x.toFixed(1),+f.z.toFixed(1),f.mode||0,f.n,inBld(f.x,f.z)?1:0,f.dbgB||null,f.why||null]),rseg:F32(rseg),tseg:F32(tseg),cseg:F32(cseg),names,marks,rebuild:!!rebuild,ms:{p:F32(MS.p),i:U32(MS.i)},md:{p:F32(MD.p),u:F32(MD.u),i:U32(MD.i)},sig:F32(SG),sigN:F32(sigN),bx:{p:F32(BX.p),n:F32(BX.n),c:F32(BX.c)},wmo:{p:F32(WM.p),n:F32(WM.n),u:F32(WM.u),c:F32(WM.c)},wbr:{p:F32(WK.p),n:F32(WK.n),u:F32(WK.u),c:F32(WK.c)},style:ST.key,bidx:F32(bIdx),bunk:F32(BU),fac:F32(FAC),wpa:{p:F32(WP.p),n:F32(WP.n),u:F32(WP.u),c:F32(WP.c)}};
  const tl=[hg.buffer,wm.buffer,out.sig.buffer,out.sigN.buffer,out.trees.buffer,out.lamps.buffer,out.rseg.buffer,out.tseg.buffer,out.cseg.buffer];
  for(const o of [out.ground,out.ms,out.md,out.bx,out.wmo,out.wpa,...out.roads,out.walk,out.bed,out.rail,out.bridge,out.wu,out.wg,out.roofs,out.water])for(const k in o)if(o[k]&&o[k].buffer)tl.push(o[k].buffer);
  postMessage(out,tl);}
@@ -1488,7 +1502,7 @@ function onChunk(m){if(m.gen!==gen)return;const key=m.tx+','+m.ty,ch=chunks.get(
  if(swap&&oldGrp){scene.remove(oldGrp);oldGrp.traverse(o=>{if(o.geometry&&!o.geometry.userData.shared)o.geometry.dispose();if(o.isInstancedMesh)o.dispose();});}
  if(route)routeDirty=true;
  if(swap)spDropChunk(key);
- Object.assign(ch,{baseCol:null,bunk:m.bunk,shs:m.shs,shn:m.shn,fdbg:m.fdbg,state:'ready',grp,rise,trees,fac:m.fac,bver:(ch.bver||0)+1,marks:m.marks,sigN:m.sigN,style:m.style,bidx:m.bidx,wallM,mly:0,h:m.h,rseg:m.rseg,tseg:m.tseg,cseg:m.cseg,names:m.names,wm:m.wm,baseY:m.baseY,t0:swap?-1e9:performance.now(),
+ Object.assign(ch,{demdec:m.demdec,baseCol:null,bunk:m.bunk,shs:m.shs,shn:m.shn,fdbg:m.fdbg,state:'ready',grp,rise,trees,fac:m.fac,bver:(ch.bver||0)+1,marks:m.marks,sigN:m.sigN,style:m.style,bidx:m.bidx,wallM,mly:0,h:m.h,rseg:m.rseg,tseg:m.tseg,cseg:m.cseg,names:m.names,wm:m.wm,baseY:m.baseY,t0:swap?-1e9:performance.now(),
   rh:mkHash(m.rseg,RS,3,-1),chh:mkHash(m.cseg,6,2,0),th:mkHash(m.tseg,6,3,2),rst:new Uint32Array(m.rseg.length/RS),cst:new Uint32Array(m.cseg.length/6),tst:new Uint32Array(m.tseg.length/6)});
  if(swap)resnap(ch);mlyApply(ch);phDropChunk(ch.key);}
 function resnap(ch){for(let i=traffic.length-1;i>=0;i--){const c=traffic[i];if(c.ch!==ch)continue;const a=ch.rseg;let best=-1,bd=4;
@@ -1584,7 +1598,11 @@ function applyCfg(k){if(k==='quality'||k==null){quality=CFG.quality;applyQuality
  if(k==='radio'&&au)radioMsg();
  $('mini').classList.toggle('hide',!CFG.mini);
  if(k==null||k==='mly'||k==='mlyOn'){wk.postMessage({t:'cfg',mly:CFG.mlyOn?CFG.mly:''});mly.err='';if(k){mly.done.clear();if(CFG.mlyOn&&CFG.mly){for(const ch of chunks.values())if(ch.state==='ready')wk.postMessage({t:'chunk',tx:ch.tx,ty:ch.ty,gen,rebuild:1});}}}}
-function toggleSettings(){setOpen=!setOpen;$('settings').classList.toggle('hide',!setOpen);keys.clear();if(setOpen)buildSettings();else $('c').focus();}
+function toggleSettings(){setOpen=!setOpen;$('settings').classList.toggle('hide',!setOpen);keys.clear();if(setOpen){buildSettings();diag();}else $('c').focus();}
+// diagnosztika a beállítások alján: ha telefonon valami nem jó, ebből látszik, hol akad el
+function diag(){let el=$('diag');if(!el){el=document.createElement('div');el.id='diag';el.style.cssText='font:600 11px ui-monospace,monospace;opacity:.6;margin-top:14px;white-space:pre-wrap';$('setbody').after(el);}
+ let r=0,l=0,bv=0,dd='';for(const ch of chunks.values()){if(ch.state==='ready'){r++;dd=ch.demdec||dd;ch.grp.traverse(o=>{if(o.geometry&&o.parent&&o.parent!==ch.grp&&o.geometry.attributes.position)bv+=o.geometry.attributes.position.count;});}else l++;}
+ el.textContent=`Diagnosztika – GPU: ${GPU} · minőség: ${['magas','közepes','alacsony'][quality]} · csempék: ${r} kész, ${l} tölt · épület-csúcspontok: ${bv} · domborzat: ${dd||'?'} · ${innerWidth}×${innerHeight} @${devicePixelRatio}`;}
 $('sopen').onclick=()=>toggleSettings();$('sclose').onclick=()=>toggleSettings();$('sreset').onclick=()=>{CFG={...CFG_DEF};saveCfg();applyCfg();buildSettings();};
 const keys=new Set(),inp={thr:0,brk:0,steer:0,hb:false};let camMode=0,muted=false,started=false;
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'){if(e.code==='Escape')e.target.blur();return;}
