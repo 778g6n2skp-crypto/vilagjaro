@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Világjáró"><link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADc0lEQVR42u3cO24TURSAYfvIJTug8CboKCASooUaCZbAAqiyFrIBaoR4FO6yCLIHFkCLlMQB7HvnnDPf3yLheXxz7syAvX119XMj3VU4BIJDcAgOwSE4BIfgEByCQ3BIcAgOwSE4BIfgEByCQ3AIDgkOwSE4BIfgEByCQ3AIDsEhwSE4BIfgEByCQ3AIDnVp12M3Pr38ft8fvf783Gn+v7alf6T2iAlKVorjn0xQsqJ7jhNlnOVvMDkasjBCek6OEZe7EdIBx7izyEdtHKPPHx9Vccw5c3zUwzHznPHh9bla4Jh/KRseNXAsdZ74sKwIDvXDsexst7KYHIJDnXBkmOpWFpNDcAgOwSE4BIfgEByCY2gZvi7gKwsmh+BQJxzLTnVriskhONQPx1Kz3ZpSY3LMP09kWFbUAsfMS9nYqDc55pwzMqouK6PPHBm17znGnT8yOtyQjjiLZGya/dTkWb43gEXPR9nTzysZfsGYiXXj8NvncMg9h+AQHIJDcAgOCQ7BITgEh+AQHIJDcAgOwSHBITgEh+AQHIJDcAgO9Wm3f/yh2S5dX/5a6qOfXD4yOcjI+OlwCI6yF26n4RFk8NEcR7bz0cOHew61xpHzMm0wPHa9ZRz2F6M34OnNtyPbVvrNR3kcC7L484OOELGs5Bob02Q8+ImlF5cgg4/72r7/+qaljP2Pq5nbc/Ps7fFbkIo3Hx5l1QtHtgWl6+IS3mrYcsuKuuOo/tqx1vbv3GqMu+2488ml0GvTKC3jsL/IJuNvNq/K/AgvyG1nbRy3L7VaR/z21pYYHkEGH32WlbpTutyWh2c/e7ep+A9vPRaUzUP/OSjtk224quyp1+fqgmM9YyPz/oYjZa8tK6qPY51jI+e+h6PjCBTAQUa24+CeQ+lxGBsJj0Y4FnxYVlQQh7GR9sgEGXxkxEFG8qPknkP5cBgb+Y9VkMGHZUUVcBgbVY5b1NrD6r/LduL2T/YRZob50eeeo+7wKLflUZF8RR9n3OZpwyOKDsNaPs6+tXN8xGpv7mznJsPXIUczT/sdydEsRn+PcjiO5E8ohy8fj53dF++SX9xDfYRnV0+2Xp8rEw5jo/rwCDL4sKwoBw5jo8fwCDL4mISDjE4+3HNoCg5jo9nwCDL4sKxoIRzGRsvhEWTwMQoHGY197FZ++PL/j40F+w0764Ujo7w28AAAAABJRU5ErkJggg=="><link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADc0lEQVR42u3cO24TURSAYfvIJTug8CboKCASooUaCZbAAqiyFrIBaoR4FO6yCLIHFkCLlMQB7HvnnDPf3yLheXxz7syAvX119XMj3VU4BIJDcAgOwSE4BIfgEByCQ3BIcAgOwSE4BIfgEByCQ3AIDgkOwSE4BIfgEByCQ3AIDsEhwSE4BIfgEByCQ3AIDnVp12M3Pr38ft8fvf783Gn+v7alf6T2iAlKVorjn0xQsqJ7jhNlnOVvMDkasjBCek6OEZe7EdIBx7izyEdtHKPPHx9Vccw5c3zUwzHznPHh9bla4Jh/KRseNXAsdZ74sKwIDvXDsexst7KYHIJDnXBkmOpWFpNDcAgOwSE4BIfgEByCY2gZvi7gKwsmh+BQJxzLTnVriskhONQPx1Kz3ZpSY3LMP09kWFbUAsfMS9nYqDc55pwzMqouK6PPHBm17znGnT8yOtyQjjiLZGya/dTkWb43gEXPR9nTzysZfsGYiXXj8NvncMg9h+AQHIJDcAgOCQ7BITgEh+AQHIJDcAgOwSHBITgEh+AQHIJDcAgO9Wm3f/yh2S5dX/5a6qOfXD4yOcjI+OlwCI6yF26n4RFk8NEcR7bz0cOHew61xpHzMm0wPHa9ZRz2F6M34OnNtyPbVvrNR3kcC7L484OOELGs5Bob02Q8+ImlF5cgg4/72r7/+qaljP2Pq5nbc/Ps7fFbkIo3Hx5l1QtHtgWl6+IS3mrYcsuKuuOo/tqx1vbv3GqMu+2488ml0GvTKC3jsL/IJuNvNq/K/AgvyG1nbRy3L7VaR/z21pYYHkEGH32WlbpTutyWh2c/e7ep+A9vPRaUzUP/OSjtk224quyp1+fqgmM9YyPz/oYjZa8tK6qPY51jI+e+h6PjCBTAQUa24+CeQ+lxGBsJj0Y4FnxYVlQQh7GR9sgEGXxkxEFG8qPknkP5cBgb+Y9VkMGHZUUVcBgbVY5b1NrD6r/LduL2T/YRZob50eeeo+7wKLflUZF8RR9n3OZpwyOKDsNaPs6+tXN8xGpv7mznJsPXIUczT/sdydEsRn+PcjiO5E8ohy8fj53dF++SX9xDfYRnV0+2Xp8rEw5jo/rwCDL4sKwoBw5jo8fwCDL4mISDjE4+3HNoCg5jo9nwCDL4sKxoIRzGRsvhEWTwMQoHGY197FZ++PL/j40F+w0764Ujo7w28AAAAABJRU5ErkJggg=="><meta name="theme-color" content="#1b2348">
+<title>Világjáró – vezess a valódi világban</title>
+<style>
+/*@style*/
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas id="c" tabindex="0"></canvas>
+<div id="status" class="pill"></div>
+<div id="where" class="pill"></div>
+<div id="route" class="pill"></div>
+<div id="help" class="pill">
+  <kbd>W</kbd><kbd>↑</kbd>gáz &nbsp; <kbd>S</kbd><kbd>↓</kbd>fék / tolatás &nbsp; <kbd>A</kbd><kbd>D</kbd>kormány<br>
+  <kbd>Space</kbd>kézifék &nbsp; <kbd>E</kbd>duda &nbsp; <kbd>C</kbd>kamera (követő / távoli / vezetőülés / motorháztető) &nbsp; <kbd>R</kbd>vissza az útra<br>
+  <kbd>G</kbd>garázs (autócsere) &nbsp; <kbd>T</kbd>tempomat &nbsp; <kbd>M</kbd>térkép (cél, útvonal, ugrás)<br><kbd>N</kbd>napszak &nbsp; <kbd>K</kbd>hang &nbsp; <kbd>H</kbd>súgó<br><kbd>F</kbd>futár küldetés &nbsp; <kbd>Q</kbd>grafikai minőség &nbsp; <kbd>O</kbd>beállítások &nbsp; <kbd>B</kbd>rádió &nbsp; <kbd>egér</kbd>húzás: körbenézés, görgő: zoom
+</div>
+<canvas id="mini" class="pill" width="380" height="380"></canvas>
+<div id="tb"><button id="tbSet" title="Beállítások (O)" aria-label="Beállítások">⚙</button><button id="tbMap" title="Térkép (M)" aria-label="Térkép">🗺</button><button id="tbCam" title="Kamera (C)" aria-label="Kamera">🎥</button><button id="tbReset" title="Vissza az útra (R)" aria-label="Vissza az útra">↺</button></div>
+<div id="touch" class="hide"><div id="steerPad"><div id="steerKnob"></div></div><div id="pedals"><button id="tBrake">FÉK<br><small>tolatás</small></button><button id="tGas">GÁZ</button></div><button id="tHb">KÉZI-<br>FÉK</button><button id="tHorn">📯</button></div>
+<div id="rotate" class="pill hide">Fordítsd fekvőbe a telefont a jobb irányításhoz ↻</div>
+<div id="limit" class="hide"></div><div id="stars" class="pill hide"></div><div id="money" class="pill hide"></div><div id="mission" class="pill hide"></div><div id="mark" class="pill hide"></div>
+<div id="speed" class="pill"><span id="cruise"></span><b id="kmh">0</b><span id="cname">km/h</span></div>
+<div id="settings" class="hide"><div class="card pill"><div class="shead"><h2>Beállítások</h2><button id="sx" aria-label="Bezárás">✕</button></div><div id="setbody"></div><p style="margin:16px 0 0"><button class="btn" id="sclose">Vissza a vezetéshez (O)</button> <button class="btn alt" id="sreset">Alapértékek</button></p></div></div>
+<div id="radio" class="pill hide"></div><div id="fps" class="hide"></div><div id="attrib" class="hide">Utcafotók, homlokzatszínek és táblák: © Mapillary közreműködők, CC BY-SA</div>
+<div id="garage" class="hide"><div class="card pill"><h2>Garázs</h2><div id="cars"></div><div id="cols"><span>Szín:</span></div><button class="btn" id="gclose">Indulás ezzel (G)</button></div></div>
+<div id="mapapp">
+  <div id="mapbar">
+    <span class="t">Térkép</span>
+    <input id="q" placeholder="Keress helyet: Hősök tere, Tihany, Eiffel-torony…" aria-label="Hely keresése">
+    <button class="btn" id="qgo">Keresés</button>
+    <button class="btn alt" id="clr">Útvonal törlése</button>
+    <button class="btn alt" id="mclose">Vissza a vezetéshez (M)</button>
+  </div>
+  <div id="mapview"><div id="mapmsg">Térkép betöltése…</div></div>
+</div>
+<div id="start"><div class="card pill">
+  <h1>Világjáró</h1>
+  <p>Vezess a valódi utcákon, Budapestről indulva. A város vezetés közben épül fel a nyílt térképadatokból, forgalommal és villamosokkal.</p>
+  <div class="tkeys" style="display:none;font-size:13px;opacity:.75;margin-bottom:16px">Bal oldalt húzd az ujjad a kormányzáshoz, jobb oldalt gáz és fék. A ⚙ gomb a beállítások.</div><div class="keys"><kbd>W</kbd><kbd>S</kbd> gáz–fék · <kbd>A</kbd><kbd>D</kbd> kormány · <kbd>Space</kbd> kézifék · <kbd>G</kbd> garázs · <kbd>T</kbd> tempomat · <kbd>F</kbd> futár · <kbd>M</kbd> térkép és cél kijelölése · <kbd>N</kbd> napszak · <kbd>H</kbd> súgó</div>
+  <button class="btn" id="go" disabled>Város betöltése…</button> <button class="btn alt" id="gopen">Autóválasztás</button> <button class="btn alt" id="sopen">Beállítások</button>
+  <div id="ver" style="margin-top:12px;font-size:11px;opacity:.5"></div>
+</div></div>
+
+<script id="wsrc" type="text/js-worker">
+/*@worker*/
+</script>
+
+<script type="module">
+/*@game*/
+</script>
+</body>
+</html>

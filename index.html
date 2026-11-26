@@ -158,6 +158,7 @@ body.touch #attrib{display:none}
   <p>Vezess a valódi utcákon, Budapestről indulva. A város vezetés közben épül fel a nyílt térképadatokból, forgalommal és villamosokkal.</p>
   <div class="tkeys" style="display:none;font-size:13px;opacity:.75;margin-bottom:16px">Bal oldalt húzd az ujjad a kormányzáshoz, jobb oldalt gáz és fék. A ⚙ gomb a beállítások.</div><div class="keys"><kbd>W</kbd><kbd>S</kbd> gáz–fék · <kbd>A</kbd><kbd>D</kbd> kormány · <kbd>Space</kbd> kézifék · <kbd>G</kbd> garázs · <kbd>T</kbd> tempomat · <kbd>F</kbd> futár · <kbd>M</kbd> térkép és cél kijelölése · <kbd>N</kbd> napszak · <kbd>H</kbd> súgó</div>
   <button class="btn" id="go" disabled>Város betöltése…</button> <button class="btn alt" id="gopen">Autóválasztás</button> <button class="btn alt" id="sopen">Beállítások</button>
+  <div id="ver" style="margin-top:12px;font-size:11px;opacity:.5"></div>
 </div></div>
 
 <script id="wsrc" type="text/js-worker">
@@ -1103,6 +1104,7 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
+const VERSION='v12';// a build.mjs tölti ki a VERSION fájlból
 
 const MLAT=110574,TZ=14,NT=1<<TZ,G=128,CELL=20,RS=14;
 const LOAD_R=950,LOOK_R=500,UNLOAD_R=2300,MAXF=5;
@@ -1604,7 +1606,7 @@ function toggleSettings(){setOpen=!setOpen;$('settings').classList.toggle('hide'
 // diagnosztika a beállítások alján: ha telefonon valami nem jó, ebből látszik, hol akad el
 function diag(){let el=$('diag');if(!el){el=document.createElement('div');el.id='diag';el.style.cssText='font:600 11px ui-monospace,monospace;opacity:.6;margin-top:14px;white-space:pre-wrap';$('setbody').after(el);}
  let r=0,l=0,bv=0,dd='';for(const ch of chunks.values()){if(ch.state==='ready'){r++;dd=ch.demdec||dd;ch.grp.traverse(o=>{if(o.geometry&&o.parent&&o.parent!==ch.grp&&o.geometry.attributes.position)bv+=o.geometry.attributes.position.count;});}else l++;}
- el.textContent=`Diagnosztika – GPU: ${GPU} · minőség: ${['magas','közepes','alacsony'][quality]} · csempék: ${r} kész, ${l} tölt · épület-csúcspontok: ${bv} · domborzat: ${dd||'?'} · ${innerWidth}×${innerHeight} @${devicePixelRatio}`;}
+ el.textContent=`Világjáró ${VERSION} · Diagnosztika – GPU: ${GPU} · minőség: ${['magas','közepes','alacsony'][quality]} · csempék: ${r} kész, ${l} tölt · épület-csúcspontok: ${bv} · domborzat: ${dd||'?'} · ${innerWidth}×${innerHeight} @${devicePixelRatio}`;}
 $('sopen').onclick=()=>toggleSettings();$('sclose').onclick=()=>toggleSettings();$('sreset').onclick=()=>{CFG={...CFG_DEF};saveCfg();applyCfg();buildSettings();};
 const keys=new Set(),inp={thr:0,brk:0,steer:0,hb:false};let camMode=0,muted=false,started=false;
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'){if(e.code==='Escape')e.target.blur();return;}
@@ -2224,6 +2226,7 @@ applyCfg();let autoT=0;setInterval(()=>{if(CFG.autoTime){const k=autoTimeIdx();i
 requestAnimationFrame(loop);
 window.__vj={SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
  time:k=>{tIdx=k;tK=1;Object.assign(tCur,pack(TIMES[k]));applyTime(0);},setRoute,toggleMap,get route(){return route;},crime:(n,m)=>crime(n,m),police,physics,GB,setCar:i=>setCar(i,carCol),jump:(a,b)=>jump(a,b,"teszt"),startMission,get wanted(){return wanted;},lightState,toLL,toXZ};
+try{$('ver').textContent='Világjáró '+VERSION;}catch(e){}
 </script>
 </body>
 </html>
