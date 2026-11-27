@@ -10,3 +10,4 @@ Dubai 25.1972 55.2744
 Iowa_videk 41.6000 -93.7000
 Hongkong_Central 22.2810 114.1580
 Budapest_Buda 47.5250 19.0200
+Budapest_Taban 47.4925 19.0425

@@ -129,19 +129,27 @@ async function build(tx,ty,g,rebuild){
    const e0=P(-L*.25,b-.55),e1=P(L*.25,b-.55),e2=P(L*.25,b+.55),e3=P(-L*.25,b+.55);cseg.push(e0[0],e0[1],e1[0],e1[1],g,g+1.9,e1[0],e1[1],e2[0],e2[1],g,g+1.9,e2[0],e2[1],e3[0],e3[1],g,g+1.9,e3[0],e3[1],e0[0],e0[1],g,g+1.9);}
   const sw=Math.min(L*.6,Math.max(2.4,name.length*.42+1));for(const sd of [-1,1]){const q=P(0,sd*(W/2+.03));SHS.push(q[0],g+ht+.42,q[1],v[0]*sd,v[1]*sd,sw,.62,4,shName(name));}
   bAdd({b:[Math.min(c0[0],c1[0],c2[0],c3[0]),Math.min(c0[1],c1[1],c2[1],c3[1]),Math.max(c0[0],c1[0],c2[0],c3[0]),Math.max(c0[1],c1[1],c2[1],c3[1])],o:[c0,c1,c2,c3],h:[]});}
- if(BL)for(const F of BL.feats){if(F.type!==3)continue;const pr=props(BL,F);if(pr.hide_3d&&!FUELP.length)continue;
-  for(const P of polysOf(BL,F,true)){if(!pr.hide_3d)bAdd(P);
+ // egy közös felület: minden épület geometriájának helye a pufferekben + alapmagassága; a végső terep elkészülte után az épület a terep szintjére tolódik
+ const BTR=[],BBUF=[WU,WG,RF,BX,WM,WP,WK];let bCur=null;const bMark=()=>({l:BBUF.map(b=>b.p.length),s:SHS.length,f:FAC.length,c:cseg.length});
+ const bClose=()=>{if(bCur){bCur.e=bMark();BTR.push(bCur);bCur=null;}},bOpen=(O,mn)=>{bClose();bCur={m:bMark(),O,mn};};
+ // OMT: az épületrészekre bontott épületek körvonala rejtett (hide_3d); ha a részek z14-en hiányoznak, a körvonal maga épül meg (különben üres telek marad, pl. Operaház)
+ const SHOWH=new Set();if(BL){const vis=[];for(const F of BL.feats){if(F.type!==3)continue;const pr=props(BL,F);if(pr.hide_3d)continue;for(const P of polysOf(BL,F,true)){const O=P.o;let A=0,cx=0,cz=0;for(let k=0;k<O.length;k++){const p=O[k],q=O[(k+1)%O.length];A+=p[0]*q[1]-q[0]*p[1];cx+=p[0];cz+=p[1];}vis.push([cx/O.length,cz/O.length,Math.abs(A/2)]);}}
+  for(const F of BL.feats){if(F.type!==3)continue;const pr=props(BL,F);if(!pr.hide_3d)continue;for(const P of polysOf(BL,F,true)){const O=P.o;let A=0;for(let k=0;k<O.length;k++){const p=O[k],q=O[(k+1)%O.length];A+=p[0]*q[1]-q[0]*p[1];}A=Math.abs(A/2);if(A<20||A>12000)continue;{let lo=1e9,hi=-1e9;for(const q of O){const h=H(q[0],q[1]);lo=Math.min(lo,h);hi=Math.max(hi,h);}if(hi-lo>5)continue;}let cov=0;
+    for(const v of vis)if(v[0]>=P.b[0]&&v[0]<=P.b[2]&&v[1]>=P.b[1]&&v[1]<=P.b[3]&&pipR(v[0],v[1],O))cov+=v[2];if(cov<A*.5)SHOWH.add(F);}}}
+ if(BL)for(const F of BL.feats){if(F.type!==3)continue;const pr=props(BL,F);const hid=pr.hide_3d&&!SHOWH.has(F);if(hid&&!FUELP.length)continue;
+  for(const P of polysOf(BL,F,true)){if(!hid)bAdd(P);
    const O=P.o;let ar=0;for(let k=0;k<O.length;k++){const p=O[k],q=O[(k+1)%O.length];ar+=p[0]*q[1]-q[0]*p[1];}ar=Math.abs(ar/2);if(ar<5)continue;
    {let qx=0,qz=0;for(const q of O){qx+=q[0];qz+=q[1];}qx/=O.length;qz/=O.length;if((dB.length&&inDetail(qx,qz))||(lms.length&&inLM(qx,qz)))continue;}
    const id=F.id||Math.round(O[0][0]*13+O[0][1]*7),r=hash(id);
    let ht=+pr.render_height||0,mh=+pr.render_min_height||0;const hUnk=ht<=5.1&&mh===0;let hq=0,hz=0;for(const q of O){hq+=q[0];hz+=q[1];}hq/=O.length;hz/=O.length;const hov=hUnk?HOV.get(Math.round(hq)+','+Math.round(hz)):undefined;
    if(ht<=5.1){const L0=ST.lvl[0],L1=ST.lvl[1];let lv=ar<45?1:ar<110?Math.min(2,L1):L0+(r%(L1-L0+1));if(ar<600&&FUELP.some(f=>Math.abs(f.x-O[0][0])<45&&Math.abs(f.z-O[0][1])<45))lv=1;ht=lv*3.25+(lv>2?.6:0);if(hov)ht=Math.max(3,Math.min(80,hov));}
-   let mn=1e9;for(const q of O)mn=Math.min(mn,H(q[0],q[1]));
-   let vt=ht>=22?(ST.tall||r%3===0?1:2):(ar>2500&&ht<16?1:0);if(vt===0&&ST.brick&&((r>>>3)%100)/100<ST.brick)vt=3;const WB=vt===0?WU:vt===1?WM:vt===2?WP:WK;
+   let mn=1e9;for(const q of O)mn=Math.min(mn,H(q[0],q[1]));bOpen(O,mn);
+   if(SHOWH.has(F))ht=Math.min(ht,30);
+   let vt=ht>=22?(ST.tall||r%3===0?1:2):(ar>2500&&ht<16?1:0);if(SHOWH.has(F))vt=ST.brick?3:0;if(vt===0&&ST.brick&&((r>>>3)%100)/100<ST.brick)vt=3;const WB=vt===0?WU:vt===1?WM:vt===2?WP:WK;
    for(const f of FUELP)if(f.x>=P.b[0]&&f.x<=P.b[2]&&f.z>=P.b[1]&&f.z<=P.b[3]&&pipR(f.x,f.z,O))f.dbgB=[Math.round(ar),ht,mh];
    if(FUELP.length&&ar<1500&&(+pr.render_height||0)<=9){const fp=FUELP.find(f=>!f.used&&f.x>=P.b[0]-3&&f.x<=P.b[2]+3&&f.z>=P.b[1]-3&&f.z<=P.b[3]+3&&(pipR(f.x,f.z,O)||O.some((p,k)=>segD(f.x,f.z,p[0],p[1],O[(k+1)%O.length][0],O[(k+1)%O.length][1])<3)));
     if(fp&&ar>60){fp.used=true;fp.mode=1;const fr=frameOf(O);canopy(fr.cx,fr.cz,fr.u,fr.L,fr.W,mn,Math.max(4.6,Math.min(6,(+pr.render_height||5)-.6)),fp.n);continue;}}
-   if(pr.hide_3d)continue;
+   if(hid)continue;
    const bp=mh===0?poisFor(P):[];
    const base=mh>0?mn+mh:mn-.8,top=mn+Math.max(ht,mh+2),shop=bp.length>0&&ar>20,split=Math.min(mn+4.2,top-.4);
    let wc=vt===3?[.9+(r%7)*.015,.88+(r%5)*.02,.86+(r%3)*.02]:WALL[r%WALL.length];if(vt!==3&&typeof pr.colour==='string'&&/^#[0-9a-f]{6}$/i.test(pr.colour)){const q=hx(pr.colour);wc=[q[0]*.6+wc[0]*.4,q[1]*.6+wc[1]*.4,q[2]*.6+wc[2]*.4];}
@@ -180,6 +188,7 @@ async function build(tx,ty,g,rebuild){
     const rc2=[rc[0]*.85+.03,rc[1]*.85+.03,rc[2]*.85+.03];
     for(let k=0;k<t.length;k+=3)tri(RF,[all[t[k]][0],top,all[t[k]][1]],[all[t[k+1]][0],top,all[t[k+1]][1]],[all[t[k+2]][0],top,all[t[k+2]][1]],[0,1,0],ar>300?rc2:rc);}}}
 
+ bClose();
  /* ferde tetőszél / manzárdtető tetszőleges (udvaros) alaprajzra: befelé tolt kontúr */
  function sArea(Rr){let A=0;for(let k=0;k<Rr.length;k++){const p=Rr[k],q=Rr[(k+1)%Rr.length];A+=p[0]*q[1]-q[0]*p[1];}return A/2;}
  function insetRing(Rr,d){const A=sArea(Rr),n=Rr.length,s=A>0?1:-1,N=[];for(let k=0;k<n;k++){const p=Rr[k],q=Rr[(k+1)%n],ex=q[0]-p[0],ez=q[1]-p[1],l=Math.hypot(ex,ez)||1;N.push([-ez/l*s,ex/l*s]);}
@@ -239,7 +248,7 @@ async function build(tx,ty,g,rebuild){
  const TERRA=['#b5563e','#a14a36','#8c4f3c'].map(hx),SPIRE=['#4f8f7d','#5a6470','#3f4a5a'].map(hx),GOLD=hx('#e2b74a');
  for(const b of dB){if(!inC(b.c[0],b.c[1])||(lms.length&&inLM(b.c[0],b.c[1])))continue;const t=b.t,O=b.O;if(b.hasParts){if(t.name)marks.push([b.c[0],b.c[1],t.name,/church|cathedral|chapel|basilica/.test(t.building)?'templom':'nevezetesség']);continue;}let A=0;for(let k=0;k<O.length;k++){const p=O[k],q=O[(k+1)%O.length];A+=p[0]*q[1]-q[0]*p[1];}const ar=Math.abs(A/2);if(ar<4)continue;
   const r=hash(b.id),church=!b.part&&(/^(church|cathedral|chapel|basilica)$/.test(t.building)||(t.amenity==='place_of_worship'&&(!t.religion||t.religion==='christian')));
-  let mn=1e9;for(const q of O)mn=Math.min(mn,H(q[0],q[1]));
+  let mn=1e9;for(const q of O)mn=Math.min(mn,H(q[0],q[1]));bOpen(O,mn);
   let h=num(t.height),mh=num(t.min_height),lv=num(t['building:levels']),ml=num(t['building:min_level']),rl=num(t['roof:levels']),rh=num(t['roof:height']);if(mh==null)mh=ml!=null?ml*3.2:0;
   const shape=String(t['roof:shape']||'flat').toLowerCase(),rad=Math.sqrt(ar/Math.PI);
   if(rh==null)rh=rl?rl*2.8:shape==='flat'?0:/dome|round/.test(shape)?rad:shape==='onion'?rad*1.7:/pyramidal|cone|conical|spire/.test(shape)?rad*(shape==='pyramidal'?1.1:2.6):/skillion|lean_to/.test(shape)?Math.min(4,rad*.4):Math.min(8,rad*.7);
@@ -347,7 +356,7 @@ async function build(tx,ty,g,rebuild){
   const a=.5*Math.atan2(2*sxz,sxx-szz),u=[Math.cos(a),Math.sin(a)],v=[-u[1],u[0]];let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
   for(const q of pts){const pu=(q[0]-mx)*u[0]+(q[1]-mz)*u[1],pv=(q[0]-mx)*v[0]+(q[1]-mz)*v[1];u0=Math.min(u0,pu);u1=Math.max(u1,pu);v0=Math.min(v0,pv);v1=Math.max(v1,pv);}
   const cu=(u0+u1)/2,cv=(v0+v1)/2;return{cx:mx+u[0]*cu+v[0]*cv,cz:mz+u[1]*cu+v[1]*cv,u,L:u1-u0,W:v1-v0};}
- for(const l of lms){if(!inC(l.x,l.z))continue;marks.push([l.x,l.z,l.n,'nevezetesség']);const mn=H(l.x,l.z);
+ for(const l of lms){if(!inC(l.x,l.z))continue;marks.push([l.x,l.z,l.n,'nevezetesség']);const mn=H(l.x,l.z);bOpen(ring(8,l.x,l.z,Math.min(l.r,40)*.6),mn);
   if(l.k==='parlament'){const f=pca(l.pts,.21,268,118,l.x,l.z),u=f.L>=f.W?f.u:[-f.u[1],f.u[0]],L=Math.max(f.L,f.W),Wd=Math.min(f.L,f.W),v=[-u[1],u[0]],sv=v[0]>0?-1:1;
    const P=(a,b)=>[f.cx+u[0]*a+v[0]*b,f.cz+u[1]*a+v[1]*b],cream=hx('#efe6cf'),red=hx('#9c4639'),dome=hx('#a85a4a'),gold=hx('#e2b74a');
    const blk=(a,b,lu,lv,hw,hr,shape)=>{const c=P(a,b),O=rectR(c[0],c[1],u,lu,lv);walls(O,mn-.8,mn+hw,cream,mn,1.5);roofGen(O,mn+hw,mn+hw+hr,shape||'hipped',red,cream);return O;};
@@ -380,6 +389,7 @@ async function build(tx,ty,g,rebuild){
      cyl(BX,x,z,.55,mn,mn+11,8,stone,.5);if(prev){const mx=(x+prev[0])/2,mz=(z+prev[1])/2,du=[x-prev[0],z-prev[1]],dl=Math.hypot(du[0],du[1]);obox(BX,mx,mz,[du[0]/dl,du[1]/dl],dl+.2,2.2,mn+11,mn+12.8,stone);}prev=[x,z];}
     obox(BX,prev[0],prev[1],d,7,7,mn,mn+15,stone);obox(BX,prev[0],prev[1],d,3,4,mn+15,mn+17.5,bronze);}}}
 
+ bClose();
  /* utcanevek */
  const names=[''],nmap=new Map([['',0]]),nh=new Map(),NC=30;
  const NL=Ls.transportation_name;
@@ -550,7 +560,7 @@ async function build(tx,ty,g,rebuild){
     if(d>rseg[k+6]-inset)continue;const ry=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;if(Math.abs(ry-y)>.6)continue;if(best==null||ry>best)best=ry;}return best;};
   const lift=(B,add,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1]-add,inset);if(c!=null&&c+add>P[v+1])P[v+1]=c+add;}};
   const sink=(B,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1],inset);if(c!=null&&P[v+1]>c-.04)P[v+1]=c-.04;}};
-  lift(R[0],0,-.05);lift(R[1],0,-.05);lift(MS,.02,-.05);lift(MD,.02,-.05);sink(R[2],.15);sink(SW,.35);}
+  lift(R[0],0,-.05);lift(R[1],0,-.05);lift(MS,.02,-.05);lift(MD,.02,-.05);sink(R[2],.15);sink(SW,.35);sink(BED,.1);}
  for(const q of dSig){if(!inC(q[0],q[1]))continue;const near=[];for(const dx of [-16,0,16])for(const dz of [-16,0,16]){const l=th.get(Math.floor((q[0]+dx)/16)*100003+Math.floor((q[1]+dz)/16));if(l)for(const e of l)if(segD(q[0],q[1],e[0],e[1],e[2],e[3])<10&&!near.includes(e))near.push(e);}
   if(!near.length)continue;near.sort((a,b)=>b[4]-a[4]);const A=near[0];let ux=A[2]-A[0],uz=A[3]-A[1];const ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;const nx=-uz,nz=ux;
   let hB=0;for(const e of near){const ex=e[2]-e[0],ez=e[3]-e[1],el=Math.hypot(ex,ez)||1;if(Math.abs((ex*ux+ez*uz)/el)<.5){hB=Math.max(hB,e[4]);}}
@@ -627,11 +637,29 @@ async function build(tx,ty,g,rebuild){
     if(cv<0){const t=y+e;if(t<hg[i])hg[i]=t;}else{const t=y-e;if(t>hg[i])hg[i]=t;}}}}
  /* a terep az út alatt mindig a burkolat alá kerül: minden rácspont, amelynek háromszöge az út lábnyomát érinti, legalább 30 cm-rel lejjebb */
  const cmL0=40075016.7*Math.cos(LA*Math.PI/180)/NT/G;
- for(let k=0;k<RFP.length;k+=4){const x=RFP[k],z=RFP[k+1],y=RFP[k+2]-.3,R2=RFP[k+3]+cmL0*1.45,c0=(lon2fx(LO+x/ML)-tx)*G,r0=(lat2fy(LA-z/MLAT)-ty)*G,rr=Math.ceil(R2/cmL0);
-  for(let r=Math.max(0,Math.floor(r0-rr));r<=Math.min(G,Math.ceil(r0+rr));r++)for(let c=Math.max(0,Math.floor(c0-rr));c<=Math.min(G,Math.ceil(c0+rr));c++){const i=r*(G+1)+c;if(wm[i])continue;if(Math.hypot(c-c0,r-r0)*cmL0<=R2&&hg[i]>y)hg[i]=y;}}
+ const lowerRFP=(fR)=>{for(let k=0;k<RFP.length;k+=4){const x=RFP[k],z=RFP[k+1],y=RFP[k+2]-.3,R2=RFP[k+3]+cmL0*fR,c0=(lon2fx(LO+x/ML)-tx)*G,r0=(lat2fy(LA-z/MLAT)-ty)*G,rr=Math.ceil(R2/cmL0);
+  for(let r=Math.max(0,Math.floor(r0-rr));r<=Math.min(G,Math.ceil(r0+rr));r++)for(let c=Math.max(0,Math.floor(c0-rr));c<=Math.min(G,Math.ceil(c0+rr));c++){const i=r*(G+1)+c;if(wm[i])continue;if(Math.hypot(c-c0,r-r0)*cmL0<=R2&&hg[i]>y)hg[i]=y;}}};lowerRFP(1.45);
+ // egy közös felület: az utak környezetében a terep az úthoz simul – a lábnyomban pontosan a burkolat alatt (emelve vagy süllyesztve), azon túl 10 m-en át lágyan vissza az eredeti domborzatra
+ {const GG=G+1,B=10,bw=new Float32Array(GG*GG),bt=new Float32Array(GG*GG),NX=new Float32Array(GG),NZ=new Float32Array(GG);for(let c=0;c<=G;c++)NX[c]=X(fx2lon(tx+c/G));for(let r=0;r<=G;r++)NZ[r]=Zf(fy2lat(ty+r/G));
+  const gc=x=>(lon2fx(LO+x/ML)-tx)*G,gr=z=>(lat2fy(LA-z/MLAT)-ty)*G;
+  for(const [pts,he] of SHQ){const R=he+cmL0*.75,ext=(R+B)/cmL0+1;for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],ca=gc(a[0]),cb=gc(b[0]),ra=gr(a[1]),rb=gr(b[1]);
+    const c0=Math.max(0,Math.floor(Math.min(ca,cb)-ext)),c1=Math.min(G,Math.ceil(Math.max(ca,cb)+ext)),r0=Math.max(0,Math.floor(Math.min(ra,rb)-ext)),r1=Math.min(G,Math.ceil(Math.max(ra,rb)+ext));if(c0>c1||r0>r1)continue;
+    const dx=b[0]-a[0],dz=b[1]-a[1],l2=dx*dx+dz*dz||1;
+    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=r*GG+c;if(wm[i])continue;const px=NX[c]-a[0],pz=NZ[r]-a[1],t=Math.max(0,Math.min(1,(px*dx+pz*dz)/l2)),d=Math.hypot(px-dx*t,pz-dz*t);if(d>R+B)continue;
+     const y=a[3]+(b[3]-a[3])*t-.3,w=d<=R?1:1-(d-R)/B;if(w>bw[i]+1e-6){bw[i]=w;bt[i]=y;}else if(w>=1&&bw[i]>=1&&y<bt[i])bt[i]=y;}}}
+  const bm=new Uint8Array(GG*GG);for(let k=0;k<rseg.length;k+=14){if(!rseg[k+7])continue;const ax=rseg[k],az=rseg[k+1],bx=rseg[k+3],bz=rseg[k+4],Rb=rseg[k+6]+8,ext=Rb/cmL0+1,ca=gc(ax),cb=gc(bx),ra=gr(az),rb2=gr(bz);
+   const c0=Math.max(0,Math.floor(Math.min(ca,cb)-ext)),c1=Math.min(G,Math.ceil(Math.max(ca,cb)+ext)),r0=Math.max(0,Math.floor(Math.min(ra,rb2)-ext)),r1=Math.min(G,Math.ceil(Math.max(ra,rb2)+ext));const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz||1;
+   for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const px=NX[c]-ax,pz=NZ[r]-az,t=Math.max(0,Math.min(1,(px*dx+pz*dz)/l2));if(Math.hypot(px-dx*t,pz-dz*t)<=Rb)bm[r*GG+c]=1;}}
+  // hidak mellett/alatt a terep nem emelkedik (a híd alatti tér szabad marad, a pálya széle mellett nem bukkan fel talaj)
+  for(let i=0;i<GG*GG;i++){const w=bw[i];if(w<=0)continue;if(bm[i]&&bt[i]>hg[i])continue;const ww=w*w*(3-2*w);hg[i]+=ww*(bt[i]-hg[i]);}}
+ lowerRFP(.75);// a simítás után is: minden út alatt a terep a burkolat alá kerül (nem bukkan át)
  // a megjelenített terep pontos magassága (ugyanaz a háromszögelés, mint a hálóé)
  const MH=(x,z)=>{const cf=(lon2fx(LO+x/ML)-tx)*G,rf2=(lat2fy(LA-z/MLAT)-ty)*G;if(cf<0||rf2<0||cf>G||rf2>G)return H(x,z);const c=Math.min(G-1,Math.floor(cf)),r=Math.min(G-1,Math.floor(rf2)),u=cf-c,v=rf2-r,W1=G+1,a=hg[r*W1+c],b=hg[r*W1+c+1],d=hg[(r+1)*W1+c],f=hg[(r+1)*W1+c+1];
   return u+v<=1?a+(b-a)*u+(d-a)*v:f+(d-f)*(1-u)+(b-f)*(1-v);};
+ // épületek a végső terepre: az alap a körvonal alatti legalacsonyabb megjelenített terepszint (a fal úgyis 0,8 m-rel lejjebb indul)
+ for(const B of BTR){let m2=1e9;for(const q of B.O)m2=Math.min(m2,MH(q[0],q[1]));const d=m2-B.mn;if(!(Math.abs(d)>.03)||Math.abs(d)>40)continue;
+  BBUF.forEach((b,i)=>{const P=b.p;for(let k=B.m.l[i];k<B.e.l[i];k+=3)P[k+1]+=d;});for(let k=B.m.s;k<B.e.s;k+=9)SHS[k+1]+=d;for(let k=B.m.f;k<B.e.f;k+=8){FAC[k+4]+=d;FAC[k+5]+=d;}for(let k=B.m.c;k<B.e.c;k+=6){cseg[k+4]+=d;cseg[k+5]+=d;}}
+ for(let k=0;k<SG.length;k+=5)SG[k+1]=MH(SG[k],SG[k+2]);// jelzőlámpák a végső terepen
  /* talaj */
  const GV=G+1,nV=GV*GV,gp=[],gc=[],gu=[],gi=[];let hsum=0;
  for(let r=0;r<=G;r++)for(let c=0;c<=G;c++){const lon=fx2lon(tx+c/G),lat=fy2lat(ty+r/G),x=X(lon),z=Zf(lat),y=hg[r*W+c];
@@ -674,7 +702,7 @@ async function build(tx,ty,g,rebuild){
    const tx=px+n[0]*(best[4]+1.6)+u[0]*(L/2+2),tz=pz+n[1]*(best[4]+1.6)+u[1]*(L/2+2);if(!onRoad(tx,tz,.2)){const gt=H(tx,tz);obox(BX,tx,tz,u,.5,1.6,gt,gt+6.5,brandCol(f.n));SHS.push(tx-n[0]*.27,gt+5.6,tz-n[1]*.27,-n[0],-n[1],1.5,.6,4,shName(f.n));SHS.push(tx+n[0]*.27,gt+5.6,tz+n[1]*.27,n[0],n[1],1.5,.6,4,shName(f.n));
     cseg.push(tx-u[0]*.3,tz-u[1]*.3,tx+u[0]*.3,tz+u[1]*.3,gt,gt+6.5);}
    break;}}
- const addT=(x,z,sc,ty2)=>{if(TR.length>60000*5||onRoad(x,z,.8)||inBld(x,z)||onW(x,z))return;TR.push(x,MH(x,z),z,sc,ty2);};for(let k=0;k<lamps.length;k+=4)lamps[k+1]=Math.min(lamps[k+1],MH(lamps[k],lamps[k+2]));
+ const addT=(x,z,sc,ty2)=>{if(TR.length>60000*5||onRoad(x,z,.8)||inBld(x,z)||onW(x,z))return;TR.push(x,MH(x,z),z,sc,ty2);};for(let k=0;k<lamps.length;k+=4)lamps[k+1]=MH(lamps[k],lamps[k+2]);
  for(let k=0;k<sTrees.length;k+=2)addT(sTrees[k],sTrees[k+1],.75+rnd()*.35,0);
  for(const q of dTr)if(inC(q[0],q[1]))addT(q[0],q[1],.8+rnd()*.45,0);
  for(const g2 of dRows)runs(g2,cum(g2),0,8,run=>{for(const q of run)if(inC(q[0],q[1]))addT(q[0],q[1],.75+rnd()*.35,0);});
@@ -687,7 +715,7 @@ async function build(tx,ty,g,rebuild){
   else for(const [lo,la,v] of r1||[]){const code=signCode(v);if(!code)continue;let x=X(lo),z=Zf(la);if(!inC(x,z))continue;let best=null,bd=16;
    for(let k=0;k<rseg.length;k+=14){if(rseg[k+9]>1)continue;const ax=rseg[k],az=rseg[k+1],dx=rseg[k+3]-ax,dz=rseg[k+4]-az,l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/l2)),px=ax+dx*t,pz=az+dz*t,d=Math.hypot(x-px,z-pz);if(d<bd){bd=d;best={px,pz,dx,dz,hw:rseg[k+6]};}}
    if(!best)continue;const ul=Math.hypot(best.dx,best.dz)||1,ux=best.dx/ul,uz=best.dz/ul,rx=-uz,rz=ux;let side=(x-best.px)*rx+(z-best.pz)*rz>=0?1:-1;
-   if(bd<best.hw+1){x=best.px+rx*side*(best.hw+1.3);z=best.pz+rz*side*(best.hw+1.3);}const f=side>0?[-ux,-uz]:[ux,uz];SGN.push(x,H(x,z),z,Math.atan2(f[0],f[1]),code);}}
+   if(bd<best.hw+1){x=best.px+rx*side*(best.hw+1.3);z=best.pz+rz*side*(best.hw+1.3);}const f=side>0?[-ux,-uz]:[ux,uz];SGN.push(x,MH(x,z),z,Math.atan2(f[0],f[1]),code);}}
  const F32=a=>new Float32Array(a),U32=a=>new Uint32Array(a);
  const out={t:'chunk',signs:SGN,tx,ty,gen:g,h:hg,wm,baseY:hsum/nV,
   ground:{p:F32(gp),c:F32(gc),u:F32(gu),i:U32(gi),nV},roads:R.map(b=>({p:F32(b.p),u:F32(b.u),i:U32(b.i)})),walk:{p:F32(SW.p),u:F32(SW.u),i:U32(SW.i)},
