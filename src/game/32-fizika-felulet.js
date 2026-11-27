@@ -16,7 +16,7 @@ function meshSurf(x,z,cy,top){let best=-1e9,low=1e9,any=false,rb=null,pb=null;co
   for(const id of l){const o=id*9,ax=T[o],az=T[o+2],bx=T[o+3],bz=T[o+5],cx=T[o+6],cz=T[o+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;
    const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;
    const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];any=true;if(y<low)low=y;if(y>cy+.6)continue;if(y>best)best=y;
-   const sr=S?S[id]:0;if(!top&&sr>=1&&sr<=3&&Math.abs(y-cy+.05)<.45){if(sr<=2){if(rb==null||y>rb)rb=y;}else if(pb==null||y>pb)pb=y;}}}
+   const sr=S?S[id]:0;if(!top&&((sr>=1&&sr<=3)||sr===5)&&Math.abs(y-cy+.05)<.45){if(sr<=2||sr===5){if(rb==null||y>rb)rb=y;}else if(pb==null||y>pb)pb=y;}}}
  if(!any)return null;if(rb!=null)return rb;if(pb!=null)return pb;return best>-1e9?best:low;}
 function colTop(col,x,z,cy){const l=col.g.get(Math.floor(x/COLC)*100003+Math.floor(z/COLC));if(!l)return null;const T=col.T;let best=null;for(const id of l){const o=id*9,ax=T[o],az=T[o+2],bx=T[o+3],bz=T[o+5],cx=T[o+6],cz=T[o+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];if(y<=cy&&(best==null||y>best))best=y;}return best;}
 function topSurf(x,z,cy){return meshSurf(x,z,cy,true);}// tárgyak (fa, lámpa, tábla) a látható legfelső felületre

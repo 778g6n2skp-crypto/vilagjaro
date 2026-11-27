@@ -1180,7 +1180,7 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
-const VERSION='v16';// a build.mjs tölti ki a VERSION fájlból
+const VERSION='v16.1';// a build.mjs tölti ki a VERSION fájlból
 
 const MLAT=110574,TZ=14,NT=1<<TZ,G=256,CELL=20,RS=14;
 const LOAD_R=950,LOOK_R=500,UNLOAD_R=2300,MAXF=5;
@@ -1545,7 +1545,7 @@ function onChunk(m){if(m.gen!==gen)return;const key=m.tx+','+m.ty,ch=chunks.get(
  if(ch.state==='loading')inflight--;else if(ch.state==='ready'&&ch.rebuilding&&m.rebuild){swap=true;ch.rebuilding=false;}else return;
  const oldGrp=ch.grp;
  const grp=new THREE.Group(),rise=new THREE.Group();grp.add(rise);
- const Gd=m.ground;ch.col=buildCol([[Gd.p,Gd.i],...m.roads.map(r=>[r.p,r.i]),[m.walk.p,m.walk.i]]);// a sínágy nem talaj: a villamospálya az úttesttel egy szintben gurul
+ const Gd=m.ground;ch.col=buildCol([[Gd.p,Gd.i],...m.roads.map(r=>[r.p,r.i]),[m.walk.p,m.walk.i],[m.bed.p,m.bed.i]]);// a sínágy is szilárd felület (különálló villamospályán ez az egyetlen burkolat)
  const snap=(x,y,z)=>{const v=colTop(ch.col,x,z,y+2.6);return v==null?y:v;};// fák, lámpák, táblák pontosan a látható felületenconst gm=mesh(geo({position:[Gd.p,3],color:[Gd.c,3],uv:[Gd.u,2]},Gd.i),MAT.ground);gm.geometry.computeVertexNormals();{const nn=gm.geometry.attributes.normal.array;for(let q=Gd.nV*3;q<nn.length;q+=3){nn[q]=0;nn[q+1]=1;nn[q+2]=0;}}grp.add(gm);
  const rib=(b,mat,ro,uv=true)=>{if(!b.p.length)return;const at={position:[b.p,3],normal:[upN(b.p),3]};if(uv&&b.u)at.uv=[b.u,2];grp.add(mesh(geo(at,b.i),mat,{ro}));};
  rib(m.walk,MAT.walk,1);if(m.ms.p.length)rib(m.ms,MAT.mark,6,false);if(m.md.p.length)rib(m.md,MAT.markD,6);m.roads.forEach((r,k)=>rib(r,MAT.road[k],[4,3,2][k]));rib(m.bed,MAT.bed,2,false);rib(m.rail,MAT.rail,5,false);
@@ -1630,7 +1630,7 @@ function meshSurf(x,z,cy,top){let best=-1e9,low=1e9,any=false,rb=null,pb=null;co
   for(const id of l){const o=id*9,ax=T[o],az=T[o+2],bx=T[o+3],bz=T[o+5],cx=T[o+6],cz=T[o+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;
    const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;
    const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];any=true;if(y<low)low=y;if(y>cy+.6)continue;if(y>best)best=y;
-   const sr=S?S[id]:0;if(!top&&sr>=1&&sr<=3&&Math.abs(y-cy+.05)<.45){if(sr<=2){if(rb==null||y>rb)rb=y;}else if(pb==null||y>pb)pb=y;}}}
+   const sr=S?S[id]:0;if(!top&&((sr>=1&&sr<=3)||sr===5)&&Math.abs(y-cy+.05)<.45){if(sr<=2||sr===5){if(rb==null||y>rb)rb=y;}else if(pb==null||y>pb)pb=y;}}}
  if(!any)return null;if(rb!=null)return rb;if(pb!=null)return pb;return best>-1e9?best:low;}
 function colTop(col,x,z,cy){const l=col.g.get(Math.floor(x/COLC)*100003+Math.floor(z/COLC));if(!l)return null;const T=col.T;let best=null;for(const id of l){const o=id*9,ax=T[o],az=T[o+2],bx=T[o+3],bz=T[o+5],cx=T[o+6],cz=T[o+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];if(y<=cy&&(best==null||y>best))best=y;}return best;}
 function topSurf(x,z,cy){return meshSurf(x,z,cy,true);}// tárgyak (fa, lámpa, tábla) a látható legfelső felületre
