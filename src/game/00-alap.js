@@ -8,7 +8,7 @@ import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 const VERSION='__VERSION__';// a build.mjs tölti ki a VERSION fájlból
 
-const MLAT=110574,TZ=14,NT=1<<TZ,G=128,CELL=20,RS=14;
+const MLAT=110574,TZ=14,NT=1<<TZ,G=256,CELL=20,RS=14;
 const LOAD_R=950,LOOK_R=500,UNLOAD_R=2300,MAXF=5;
 let lat0=47.50320,lon0=19.06010,mlon=111320*Math.cos(lat0*Math.PI/180),gen=1;
 /* bal oldali közlekedés országai (durva határolódobozok, a szomszéd jobbos országokat kizárva) */

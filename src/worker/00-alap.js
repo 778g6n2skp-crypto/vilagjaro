@@ -1,5 +1,5 @@
 importScripts('https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js');
-const TZ=14,NT=1<<TZ,G=128;
+const TZ=14,NT=1<<TZ,G=256;// terep-rács: ~6,5 m (a régi 13 m nem tudta követni a dombos utakat)
 let lat0=0,lon0=0,mlon=1,tileURL=null;const MLAT=110574;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const say=msg=>postMessage({t:'status',msg});

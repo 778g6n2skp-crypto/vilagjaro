@@ -1,7 +1,7 @@
 /* ---------- lekérdezések ---------- */
 function terrainH(x,z){const [la,lo]=toLL(x,z),gx=lon2fx(lo)*G,gy=lat2fy(la)*G,a=Math.floor(gx),b=Math.floor(gy),tx=Math.floor(a/G),ty=Math.floor(b/G);
  const ch=chunks.get(tx+','+ty);if(!ch||!ch.h)return NaN;const W=G+1,c=a-tx*G,r=b-ty*G,u=gx-a,v=gy-b,h=ch.h;
- return(h[r*W+c]*(1-u)+h[r*W+c+1]*u)*(1-v)+(h[(r+1)*W+c]*(1-u)+h[(r+1)*W+c+1]*u)*v;}
+ const A=h[r*W+c],B=h[r*W+c+1],D2=h[(r+1)*W+c],F=h[(r+1)*W+c+1];return u+v<=1?A+(B-A)*u+(D2-A)*v:F+(D2-F)*(1-u)+(B-F)*(1-v);}// ugyanaz a háromszögelés, mint a megjelenített terepé
 let qid=1;
 function forSegs(x,z,r,kind,fn){qid++;const a=tileOf(x-r-140,z-r-140),b=tileOf(x+r+140,z+r+140);
  for(let tx=a[0];tx<=b[0];tx++)for(let ty=a[1];ty<=b[1];ty++){const ch=chunks.get(tx+','+ty);if(!ch||ch.state!=='ready')continue;
