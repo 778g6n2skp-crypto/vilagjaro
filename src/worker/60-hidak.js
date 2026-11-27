@@ -24,7 +24,7 @@ async function bridgeProfile(tx,ty,E,R,pr,off){
  await demBox(la0-.003,la1+.003,lo0-.004,lo1+.004);
  const S=[0];for(let k=1;k<full.length;k++)S.push(S[k-1]+dm(full[k],full[k-1]));const L=Math.max(S[S.length-1],.1),s0=S[pre];
  /* általános hídprofil: a pálya annyira emelkedik, amennyit az alatta lévő víz, út, vasút megkövetel, és nem meredekebb a megengedettnél; a végek lehetnek a terep fölött */
- const cl0=pr.class,grade=/rail|transit/.test(cl0)?.035:/^(motorway|trunk|primary|secondary)$/.test(cl0)?.045:cl0==='path'?.08:.06;
+ const cl0=pr.class,grade=/rail|transit/.test(cl0)?.035:/^(motorway|trunk|primary|secondary)$/.test(cl0)?.045:cl0==='path'?.3:.06;
  const N=Math.max(2,Math.ceil(L/4)),ds=L/N,P=[],req=new Float32Array(N+1),ter=new Float32Array(N+1),wat=new Uint8Array(N+1),wl=new Float32Array(N+1);
  let k=0;for(let i=0;i<=N;i++){const s=i*ds;while(k<S.length-2&&S[k+1]<s)k++;const f=Math.min(1,(s-S[k])/((S[k+1]-S[k])||1));P.push([full[k][0]+(full[k+1][0]-full[k][0])*f,full[k][1]+(full[k+1][1]-full[k][1])*f]);}
  for(let i=0;i<=N;i++){const [lon,lat]=P[i];ter[i]=sAt(lat,lon);const fx=lon2fx(lon),fy=lat2fy(lat),t2=[Math.floor(fx),Math.floor(fy)];let ct=null;try{ct=await correctTile(t2[0],t2[1]);}catch(e){}
@@ -45,6 +45,8 @@ async function bridgeProfile(tx,ty,E,R,pr,off){
       for(let q=Math.max(0,Math.floor((sc-half)/ds));q<=Math.min(N,Math.ceil((sc+half)/ds));q++)req[q]=Math.max(req[q],need);}}}}}
  // emelkedési korlát: a legalacsonyabb pálya, ami minden követelményt teljesít
  const ys=new Float32Array(N+1);for(let i=0;i<=N;i++)ys[i]=req[i]+off;
- const env=()=>{for(let i=1;i<=N;i++)ys[i]=Math.max(ys[i],ys[i-1]-grade*ds);for(let i=N-1;i>=0;i--)ys[i]=Math.max(ys[i],ys[i+1]-grade*ds);};env();
+ // lejtős terepen (domboldal, kanyargó felüljáró) a két vég közti szintkülönbséget a pálya követi: a korlát legalább ennyi, különben a magasabb végtől induló burkoló a mélyebb vég fölé emelné a pályát
+ const eG=Math.abs((ter[N]+ter[Math.max(0,N-1)])/2-(ter[0]+ter[Math.min(N,1)])/2)/L,gr=Math.min(1,Math.max(grade,eG*1.15+.01));
+ const env=()=>{for(let i=1;i<=N;i++)ys[i]=Math.max(ys[i],ys[i-1]-gr*ds);for(let i=N-1;i>=0;i--)ys[i]=Math.max(ys[i],ys[i+1]-gr*ds);};env();
  for(let it=0;it<2;it++){const c=ys.slice();const w=Math.max(1,Math.round(12/ds));for(let i=0;i<=N;i++){let a=0,n=0;for(let j=Math.max(0,i-w);j<=Math.min(N,i+w);j++){a+=c[j];n++;}ys[i]=Math.max(req[i]+off,a/n);}env();}
- const grd=grade;return{s0,full,S,L,grade:grd,ter0:ter[0],ter1:ter[N],cls:pr.class,at:s=>{const x=Math.max(0,Math.min(N,s/L*N)),i=Math.min(N-1,Math.floor(x)),f=x-i;return ys[i]*(1-f)+ys[i+1]*f;}};}
+ const grd=gr;return{s0,full,S,L,grade:grd,ter0:ter[0],ter1:ter[N],cls:pr.class,at:s=>{const x=Math.max(0,Math.min(N,s/L*N)),i=Math.min(N-1,Math.floor(x)),f=x-i;return ys[i]*(1-f)+ys[i+1]*f;}};}

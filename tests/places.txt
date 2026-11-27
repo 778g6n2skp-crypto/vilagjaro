@@ -1,0 +1,12 @@
+SanFrancisco 37.8010 -122.4190
+Tokio_Shibuya 35.6595 139.7005
+Rio_SantaTeresa -22.9180 -43.1860
+Zermatt 46.0207 7.7491
+Manhattan 40.7549 -73.9840
+Mumbai 19.0190 72.8430
+Nairobi -1.2864 36.8172
+Lisszabon_Alfama 38.7115 -9.1300
+Dubai 25.1972 55.2744
+Iowa_videk 41.6000 -93.7000
+Hongkong_Central 22.2810 114.1580
+Budapest_Buda 47.5250 19.0200

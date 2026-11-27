@@ -12,6 +12,16 @@ async function pngRGB(B){if(typeof DecompressionStream==='undefined')return null
    if(f===0)r=v;else if(f===1)r=v+a;else if(f===2)r=v+b;else if(f===3)r=v+((a+b)>>1);else{const pp=a+b-c,pa=Math.abs(pp-a),pb=Math.abs(pp-b),pc=Math.abs(pp-c);r=v+(pa<=pb&&pa<=pc?a:pb<=pc?b:c);}cur[x]=r&255;}
   for(let x=0;x<W;x++){out[(y*W+x)*3]=cur[x*bpp];out[(y*W+x)*3+1]=cur[x*bpp+1];out[(y*W+x)*3+2]=cur[x*bpp+2];}prev.set(cur);}
  return out;}
+// adathibák (üres foltok, -8000 m-es tüskék) kiszűrése: a pont jóval többet tér el a 9×9-es keret mediánjától, mint amennyit a környék meredeksége indokol → keret-medián (foltoknál kívülről befelé, több körben)
+function despike(h){const RX=new Int8Array(32),RY=new Int8Array(32);let nr=0;for(let d=-4;d<=4;d++){RX[nr]=d;RY[nr++]=-4;RX[nr]=d;RY[nr++]=4;if(d>-4&&d<4){RX[nr]=-4;RY[nr++]=d;RX[nr]=4;RY[nr++]=d;}}
+ const v=new Float32Array(nr),w=new Float32Array(nr),P8=new Float32Array(8);let tot=0;
+ for(let it=0;it<6;it++){const fix=[];
+  for(let y=0;y<256;y++){const y0=y<4?0:y-4,y1=y>251?255:y+4;for(let x=0;x<256;x++){const c=h[y*256+x],x0=x<4?0:x-4,x1=x>251?255:x+4;
+   const X0=x<8?0:x-8,X1=x>247?255:x+8,Y0=y<8?0:y-8,Y1=y>247?255:y+8;P8[0]=h[y*256+x0];P8[1]=h[y*256+x1];P8[2]=h[y0*256+x];P8[3]=h[y1*256+x];P8[4]=h[y*256+X0];P8[5]=h[y*256+X1];P8[6]=h[Y0*256+x];P8[7]=h[Y1*256+x];P8.sort();if(c>P8[2]-60&&c<P8[5]+60)continue;
+   for(let k=0;k<nr;k++){let xx=x+RX[k],yy=y+RY[k];xx=xx<0?0:xx>255?255:xx;yy=yy<0?0:yy>255?255:yy;v[k]=h[yy*256+xx];}
+   v.sort();const m=v[nr>>1];if(Math.abs(c-m)<60)continue;for(let k=0;k<nr;k++)w[k]=Math.abs(v[k]-m);w.sort();const mad=w[nr>>1];if(Math.abs(c-m)>Math.max(60,4*mad+40))fix.push(y*256+x,m);}}
+  for(let k=0;k<fix.length;k+=2)h[fix[k]]=fix[k+1];tot+=fix.length/2;if(!fix.length)break;}
+ return tot;}
 function loadDem(x,y){const k=x+'/'+y;let p=tilesP.get(k);if(p)return p;
  p=(async()=>{for(let a=0;a<3;a++){try{
   const r=await fetch('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/'+DZ+'/'+x+'/'+y+'.png');if(!r.ok)throw 0;
@@ -21,6 +31,7 @@ function loadDem(x,y){const k=x+'/'+y;let p=tilesP.get(k);if(p)return p;
    g.drawImage(bm,0,0);const d=g.getImageData(0,0,256,256).data;px=new Uint8Array(65536*3);for(let i=0;i<65536;i++){px[i*3]=d[i*4];px[i*3+1]=d[i*4+1];px[i*3+2]=d[i*4+2];}}
   const h=new Float32Array(65536);let s=0;
   for(let i=0;i<65536;i++){h[i]=px[i*3]*256+px[i*3+1]+px[i*3+2]/256-32768;s+=h[i];}
+  despike(h);s=0;for(let i=0;i<65536;i++)s+=h[i];
   fbS+=s/65536;fbN++;fb=fbS/fbN;tileD.set(k,h);return h;}catch(e){await sleep(600*(a+1));}}tileD.set(k,null);return null;})();
  tilesP.set(k,p);return p;}
 function dem(lat,lon){const f=dxy(lat,lon),tx=Math.floor(f[0]),ty=Math.floor(f[1]),k=tx+'/'+ty;
