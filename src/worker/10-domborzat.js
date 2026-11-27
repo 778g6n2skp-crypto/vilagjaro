@@ -32,7 +32,7 @@ function loadDem(x,y){const k=x+'/'+y;let p=tilesP.get(k);if(p)return p;
   const h=new Float32Array(65536);let s=0;
   for(let i=0;i<65536;i++){h[i]=px[i*3]*256+px[i*3+1]+px[i*3+2]/256-32768;s+=h[i];}
   despike(h);s=0;for(let i=0;i<65536;i++)s+=h[i];
-  fbS+=s/65536;fbN++;fb=fbS/fbN;tileD.set(k,h);return h;}catch(e){await sleep(600*(a+1));}}tileD.set(k,null);return null;})();
+  fbS+=s/65536;fbN++;fb=fbS/fbN;tileD.set(k,h);if(tileD.size>120){const k0=tileD.keys().next().value;tileD.delete(k0);tilesP.delete(k0);}return h;}catch(e){await sleep(600*(a+1));}}tileD.set(k,null);return null;})();
  tilesP.set(k,p);return p;}
 function dem(lat,lon){const f=dxy(lat,lon),tx=Math.floor(f[0]),ty=Math.floor(f[1]),k=tx+'/'+ty;
  if(!tileD.has(k)){demMiss=true;return fb==null?0:fb;}const h=tileD.get(k);if(!h)return fb==null?0:fb;
@@ -42,13 +42,14 @@ const rmemo=new Map(),memo=new Map();
 function rawL(a,b){const k=a*4e7+b;let v=rmemo.get(k);if(v!==undefined)return v;
  const lon=fx2lon(a/G),lat=fy2lat(b/G);demMiss=false;
  v=(dem(lat,lon)*4+dem(lat+5e-5,lon)+dem(lat-5e-5,lon)+dem(lat,lon+7e-5)+dem(lat,lon-7e-5))/8;
- if(!demMiss){if(rmemo.size>2500000)rmemo.clear();rmemo.set(k,v);}return v;}
-function latH(a,b){const v=memo.get(a*4e7+b);return v!==undefined?v:rawL(a,b);}
+ if(!demMiss){if(rmemo.size>400000)rmemo.clear();rmemo.set(k,v);}return v;}
+const CTG=new Map();
+function latH(a,b){const tx=Math.floor(a/G),ty=Math.floor(b/G),h=CTG.get(tx*100000+ty);if(h){const c=a-tx*G,r=b-ty*G;return h[r*(G+1)+c];}return rawL(a,b);}
 const bil=(f,lat,lon)=>{const gx=lon2fx(lon)*G,gy=lat2fy(lat)*G,a=Math.floor(gx),b=Math.floor(gy),u=gx-a,v=gy-b;return(f(a,b)*(1-u)+f(a+1,b)*u)*(1-v)+(f(a,b+1)*(1-u)+f(a+1,b+1)*u)*v;};
 const hAt=(lat,lon)=>bil(latH,lat,lon),rawAt=(lat,lon)=>bil(rawL,lat,lon);
 /* folyók/tavak egységes, varratmentes vízszintje: durva rács, minden csomópont a környék legalacsonyabb pontja */
 const vmemo=new Map();
-function vNode(A,B){const k=A*4e6+B;let v=vmemo.get(k);if(v!==undefined)return v;v=1e9;let miss=false;
+function vNode(A,B){const k=A*4e6+B;let v=vmemo.get(k);if(v!==undefined)return v;v=1e9;let miss=false;if(vmemo.size>200000)vmemo.clear();
  for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){demMiss=false;const h=rawL(A*16+i*4,B*16+j*4);if(demMiss)miss=true;v=Math.min(v,h);}
  if(!miss)vmemo.set(k,v);return v;}
 function waterLvl(lat,lon){const gx=lon2fx(lon)*G/16,gy=lat2fy(lat)*G/16,a=Math.floor(gx),b=Math.floor(gy),u=gx-a,v=gy-b;
@@ -58,6 +59,6 @@ const smemo=new Map();
 function sL(a,b){const k=a*4e7+b;let v=smemo.get(k);if(v!==undefined)return v;const vals=[];let miss=false;
  for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){demMiss=false;vals.push(rawL(a+i,b+j));if(demMiss)miss=true;}
  vals.sort((x,y)=>x-y);let t=0;for(let i=3;i<18;i++)t+=vals[i];v=t/15;
- if(!miss){if(smemo.size>2500000)smemo.clear();smemo.set(k,v);}return v;}
+ if(!miss){if(smemo.size>400000)smemo.clear();smemo.set(k,v);}return v;}
 const sAt=(lat,lon)=>bil(sL,lat,lon);
 function demBox(s,n,w,e){const a=dxy(n,w),b=dxy(s,e),p=[];for(let x=Math.floor(a[0]);x<=Math.floor(b[0]);x++)for(let y=Math.floor(a[1]);y<=Math.floor(b[1]);y++)p.push(loadDem(x,y));return Promise.all(p);}

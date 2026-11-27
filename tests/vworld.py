@@ -16,6 +16,15 @@ with sync_playwright() as p:
         for(let s=0;s<L;s+=2){const t=s/L,x=a[k]+dx*t,z=a[k+1]+dz*t,y=a[k+2]+(a[k+5]-a[k+2])*t;for(const sd of [-1,1])for(const o of [hw+.8,hw+4]){const px=x+nx*sd*o,pz=z+nz*sd*o,g=v.meshSurf(px,pz,y+5,true);if(g==null)continue;en++;const d=g-y;if(d>.6){pl++;if(pe.length<4)pe.push([Math.round(px-c.x),Math.round(pz-c.z),+d.toFixed(1)]);}if(d<-1)dr++;}}}}
       let rk=0;for(const ch of v.chunks.values())if(ch.state==='ready')rk++;
       return {km:+(n*.5/1000).toFixed(1),lepcso5_km:+(b5/(n*.5/1000||1)).toFixed(1),lepcso15_km:+(b15/(n*.5/1000||1)).toFixed(1),max:+mx.toFixed(2),lyuk:nul,ex,targy:on,lebeg:up,sullyed:dn,ue,de,chunks:rk,szel_n:en,plato_pct:+(100*pl/(en||1)).toFixed(1),szakadek_pct:+(100*dr/(en||1)).toFixed(1),pe}}""")
+    try:
+        from PIL import Image
+        pg.screenshot(path=f'/tmp/vw_{name}.png');im=Image.open(f'/tmp/vw_{name}.png').convert('RGB');W,Hh=im.size;n=0;w=0
+        for y in range(int(Hh*.6),Hh,6):
+            for x in range(0,W,6):
+                rr,gg,bb=im.getpixel((x,y));n+=1
+                if rr>200 and gg>215 and bb>225 and bb-rr<40: w+=1
+        r['feher_pct']=round(100*w/n,1)
+    except Exception as e: r['feher_pct']=str(e)[:40]
     r['name']=name;r['betoltes_s']=round(tl,1);r['hibak']=[l for l in logs if 'rror' in l][:3]
     print('RES '+json.dumps(r,ensure_ascii=False))
     br.close()

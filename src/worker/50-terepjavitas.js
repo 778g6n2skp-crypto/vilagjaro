@@ -30,7 +30,7 @@ function correctTile(tx,ty){const key=tx+','+ty;let pr=ctCache.get(key);if(pr)re
       if(d<best[i])best[i]=d;}}}
    for(let r=1;r<G;r++)for(let c=1;c<G;c++){const i=r*W+c,d=best[i];if(d>cm+3)continue;const road=sL(tx*G+c,ty*G+r)-.08;
     const dh=h[i]-road;h[i]=d<=3?road:road+Math.max(-(d-3)*.5,Math.min((d-3)*.4,dh));}}
-  if(memo.size>3000000){memo.clear();ctCache.clear();}
-  for(let r=1;r<G;r++)for(let c=1;c<G;c++){const i=r*W+c;if(h[i]!==raw[i])memo.set((tx*G+c)*4e7+ty*G+r,h[i]);}
+  // a korrigált rács csempénként, tömbben tárolva (Map-bejegyzések helyett: töredék memória, iPhone-on nem fogy el)
+  CTG.set(tx*100000+ty,h);if(CTG.size>40)CTG.delete(CTG.keys().next().value);
   return{h,wm};})();
- ctCache.set(key,pr);pr.catch(()=>ctCache.delete(key));if(ctCache.size>90)ctCache.delete(ctCache.keys().next().value);return pr;}
+ ctCache.set(key,pr);pr.catch(()=>ctCache.delete(key));if(ctCache.size>30)ctCache.delete(ctCache.keys().next().value);return pr;}
