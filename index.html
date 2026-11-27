@@ -986,6 +986,12 @@ async function build(tx,ty,g,rebuild){
   if(cls===0&&hw>3.4){line(hw-.35,false);line(-(hw-.35),false);}}
  const nearRY=(x,z,r)=>{let best=null,bd=r;for(const dx of [-16,0,16])for(const dz of [-16,0,16]){const l=rgrid.get(Math.floor((x+dx)/16)*100003+Math.floor((z+dz)/16));if(!l)continue;for(const k of l){if(rseg[k+9]>1||rseg[k+7])continue;const ax=rseg[k],az=rseg[k+1],ddx=rseg[k+3]-ax,ddz=rseg[k+4]-az,l2=ddx*ddx+ddz*ddz||1,t=Math.max(0,Math.min(1,((x-ax)*ddx+(z-az)*ddz)/l2)),d=Math.hypot(x-ax-ddx*t,z-az-ddz*t)-rseg[k+6];if(d<bd){bd=d;best=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;}}}return best;};// a külön járda a mellette futó út szintjén
  for(const g2 of dSide){if(g2.length<2)continue;runs(g2,cum(g2),4,6,run=>{const ry=p=>{const y=nearRY(p[0],p[1],7);return y!=null?y+.12:HS(p[0],p[1])+.1;};ribbon(SW,run,1.25,ry,0,10);for(const q of run)RFP.push(q[0],q[1],q[3],1.25);SHQ.push([run.map(q=>q.slice()),1.25]);});}
+ // ---- egy pálya: átfedő út-szalagok egy szintre hozása (lépcső helyett folytonos felület) ----
+ {const cov=(x,z,y,inset)=>{let best=null;const l=rgrid.get(Math.floor(x/16)*100003+Math.floor(z/16));if(!l)return null;for(const k of l){if(rseg[k+7]||rseg[k+9]>1)continue;const ax=rseg[k],az=rseg[k+1],dx=rseg[k+3]-ax,dz=rseg[k+4]-az,l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/l2)),d=Math.hypot(x-ax-dx*t,z-az-dz*t);
+    if(d>rseg[k+6]-inset)continue;const ry=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;if(Math.abs(ry-y)>.6)continue;if(best==null||ry>best)best=ry;}return best;};
+  const lift=(B,add,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1]-add,inset);if(c!=null&&c+add>P[v+1])P[v+1]=c+add;}};
+  const sink=(B,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1],inset);if(c!=null&&P[v+1]>c-.04)P[v+1]=c-.04;}};
+  lift(R[0],0,-.05);lift(R[1],0,-.05);lift(MS,.02,-.05);lift(MD,.02,-.05);sink(R[2],.15);sink(SW,.35);}
  for(const q of dSig){if(!inC(q[0],q[1]))continue;const near=[];for(const dx of [-16,0,16])for(const dz of [-16,0,16]){const l=th.get(Math.floor((q[0]+dx)/16)*100003+Math.floor((q[1]+dz)/16));if(l)for(const e of l)if(segD(q[0],q[1],e[0],e[1],e[2],e[3])<10&&!near.includes(e))near.push(e);}
   if(!near.length)continue;near.sort((a,b)=>b[4]-a[4]);const A=near[0];let ux=A[2]-A[0],uz=A[3]-A[1];const ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;const nx=-uz,nz=ux;
   let hB=0;for(const e of near){const ex=e[2]-e[0],ez=e[3]-e[1],el=Math.hypot(ex,ez)||1;if(Math.abs((ex*ux+ez*uz)/el)<.5){hB=Math.max(hB,e[4]);}}
@@ -1160,7 +1166,7 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
-const VERSION='v14';// a build.mjs tölti ki a VERSION fájlból
+const VERSION='v15';// a build.mjs tölti ki a VERSION fájlból
 
 const MLAT=110574,TZ=14,NT=1<<TZ,G=256,CELL=20,RS=14;
 const LOAD_R=950,LOOK_R=500,UNLOAD_R=2300,MAXF=5;
@@ -1525,14 +1531,15 @@ function onChunk(m){if(m.gen!==gen)return;const key=m.tx+','+m.ty,ch=chunks.get(
  if(ch.state==='loading')inflight--;else if(ch.state==='ready'&&ch.rebuilding&&m.rebuild){swap=true;ch.rebuilding=false;}else return;
  const oldGrp=ch.grp;
  const grp=new THREE.Group(),rise=new THREE.Group();grp.add(rise);
- const Gd=m.ground;ch.col=buildCol([[Gd.p,Gd.i],...m.roads.map(r=>[r.p,r.i]),[m.walk.p,m.walk.i],[m.bed.p,m.bed.i]]);const gm=mesh(geo({position:[Gd.p,3],color:[Gd.c,3],uv:[Gd.u,2]},Gd.i),MAT.ground);gm.geometry.computeVertexNormals();{const nn=gm.geometry.attributes.normal.array;for(let q=Gd.nV*3;q<nn.length;q+=3){nn[q]=0;nn[q+1]=1;nn[q+2]=0;}}grp.add(gm);
+ const Gd=m.ground;ch.col=buildCol([[Gd.p,Gd.i],...m.roads.map(r=>[r.p,r.i]),[m.walk.p,m.walk.i]]);// a sínágy nem talaj: a villamospálya az úttesttel egy szintben gurul
+ const snap=(x,y,z)=>{const v=colTop(ch.col,x,z,y+2.6);return v==null?y:v;};// fák, lámpák, táblák pontosan a látható felületenconst gm=mesh(geo({position:[Gd.p,3],color:[Gd.c,3],uv:[Gd.u,2]},Gd.i),MAT.ground);gm.geometry.computeVertexNormals();{const nn=gm.geometry.attributes.normal.array;for(let q=Gd.nV*3;q<nn.length;q+=3){nn[q]=0;nn[q+1]=1;nn[q+2]=0;}}grp.add(gm);
  const rib=(b,mat,ro,uv=true)=>{if(!b.p.length)return;const at={position:[b.p,3],normal:[upN(b.p),3]};if(uv&&b.u)at.uv=[b.u,2];grp.add(mesh(geo(at,b.i),mat,{ro}));};
  rib(m.walk,MAT.walk,1);if(m.ms.p.length)rib(m.ms,MAT.mark,6,false);if(m.md.p.length)rib(m.md,MAT.markD,6);m.roads.forEach((r,k)=>rib(r,MAT.road[k],[4,3,2][k]));rib(m.bed,MAT.bed,2,false);rib(m.rail,MAT.rail,5,false);
  if(m.water.p.length){const p=m.water.p,uv=new Float32Array(p.length/3*2);for(let q=0,v=0;q<p.length;q+=3,v+=2){uv[v]=p[q]/14;uv[v+1]=p[q+2]/14;}grp.add(mesh(geo({position:[p,3],uv:[uv,2],normal:[upN(p),3]},m.water.i),MAT.water));}
  if(m.bridge.p.length)grp.add(mesh(geo({position:[m.bridge.p,3],normal:[m.bridge.n,3]}),MAT.bridge,{cast:1}));
  if(m.signs&&m.signs.length){const S=m.signs,by=new Map();for(let k=0;k<S.length;k+=5){const c=S[k+4];if(!by.has(c))by.set(c,[]);by.get(c).push(k);}
   const np=S.length/5,pole=new THREE.InstancedMesh(signPole,MAT.pole,np),back=new THREE.InstancedMesh(signBack,signBackMat,np);let j=0;
-  for(const [code,ks] of by){const face=new THREE.InstancedMesh(signGeo,signMat(code),ks.length);ks.forEach((k,i)=>{dummy.position.set(S[k],S[k+1],S[k+2]);dummy.rotation.set(0,S[k+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();face.setMatrixAt(i,dummy.matrix);pole.setMatrixAt(j,dummy.matrix);back.setMatrixAt(j++,dummy.matrix);});face.computeBoundingSphere();grp.add(face);}
+  for(const [code,ks] of by){const face=new THREE.InstancedMesh(signGeo,signMat(code),ks.length);ks.forEach((k,i)=>{S[k+1]=snap(S[k],S[k+1],S[k+2]);dummy.position.set(S[k],S[k+1],S[k+2]);dummy.rotation.set(0,S[k+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();face.setMatrixAt(i,dummy.matrix);pole.setMatrixAt(j,dummy.matrix);back.setMatrixAt(j++,dummy.matrix);});face.computeBoundingSphere();grp.add(face);}
   pole.computeBoundingSphere();back.computeBoundingSphere();grp.add(pole,back);}
  const wallM={};if(m.wu.p.length){wallM[0]=mesh(geo({position:[m.wu.p,3],normal:[m.wu.n,3],uv:[m.wu.u,2],color:[m.wu.c,3]}),MAT.wu,{cast:1});rise.add(wallM[0]);}
  if(m.wg.p.length)rise.add(mesh(geo({position:[m.wg.p,3],normal:[m.wg.n,3],uv:[m.wg.u,2]}),MAT.wg,{cast:1}));
@@ -1543,19 +1550,19 @@ function onChunk(m){if(m.gen!==gen)return;const key=m.tx+','+m.ty,ch=chunks.get(
  if(m.roofs.p.length)rise.add(mesh(geo({position:[m.roofs.p,3],normal:[m.roofs.n,3],color:[m.roofs.c,3]}),MAT.roof,{cast:1}));
  const T=m.trees,nt=T.length/5;let trees=null;
  if(nt){trees={n:nt,M:new Float32Array(nt*16),C:new Float32Array(nt*3),K:new Uint8Array(nt),P:new Float32Array(nt*4)};
-  for(let q=0;q<nt;q++){const s=T[q*5+3];dummy.position.set(T[q*5],T[q*5+1]-.15,T[q*5+2]);dummy.rotation.set(0,Math.random()*6.28,0);dummy.scale.set(s,s*(.85+Math.random()*.3),s);dummy.updateMatrix();dummy.matrix.toArray(trees.M,q*16);
+  for(let q=0;q<nt;q++){const s=T[q*5+3];T[q*5+1]=snap(T[q*5],T[q*5+1],T[q*5+2]);dummy.position.set(T[q*5],T[q*5+1]-.15,T[q*5+2]);dummy.rotation.set(0,Math.random()*6.28,0);dummy.scale.set(s,s*(.85+Math.random()*.3),s);dummy.updateMatrix();dummy.matrix.toArray(trees.M,q*16);
    trees.K[q]=T[q*5+4]?1:0;if(T[q*5+4])tcol.setHSL(.38+Math.random()*.05,.35,.26+Math.random()*.06);else tcol.setHSL(.22+Math.random()*.08,.42+Math.random()*.15,.36+Math.random()*.1);tcol.toArray(trees.C,q*3);
    trees.P[q*4]=T[q*5];trees.P[q*4+1]=T[q*5+1];trees.P[q*4+2]=T[q*5+2];trees.P[q*4+3]=s;}
   {const cells=new Map();for(let q=0;q<nt;q++){const k=Math.floor(trees.P[q*4]/64)*100003+Math.floor(trees.P[q*4+2]/64);let l=cells.get(k);if(!l)cells.set(k,l=[]);l.push(q);}
    trees.cells=[...cells.values()].map(l=>{let x=0,y=0,z=0;for(const q of l){x+=trees.P[q*4];y+=trees.P[q*4+1];z+=trees.P[q*4+2];}return{x:x/l.length,y:y/l.length,z:z/l.length,idx:Int32Array.from(l)};});}}TREE.dirty=true;
  const L=m.lamps,nl=L.length/4;
  if(nl){const pl=new THREE.InstancedMesh(GEO.pole,MAT.pole,nl),he=new THREE.InstancedMesh(GEO.head,MAT.lampHead,nl),pool=new THREE.InstancedMesh(GEO.pool,MAT.pool,nl);
-  for(let q=0;q<nl;q++){dummy.position.set(L[q*4],L[q*4+1],L[q*4+2]);dummy.rotation.set(0,L[q*4+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();pl.setMatrixAt(q,dummy.matrix);he.setMatrixAt(q,dummy.matrix);
+  for(let q=0;q<nl;q++){L[q*4+1]=snap(L[q*4],L[q*4+1],L[q*4+2]);dummy.position.set(L[q*4],L[q*4+1],L[q*4+2]);dummy.rotation.set(0,L[q*4+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();pl.setMatrixAt(q,dummy.matrix);he.setMatrixAt(q,dummy.matrix);
    dummy.position.set(L[q*4]+Math.sin(L[q*4+3])*1.5,L[q*4+1]+.25,L[q*4+2]+Math.cos(L[q*4+3])*1.5);dummy.updateMatrix();pool.setMatrixAt(q,dummy.matrix);}
   pl.castShadow=true;for(const im of [pl,he,pool])im.computeBoundingSphere();rise.add(pl,he);grp.add(pool);}
  const SG=m.sig,ns=SG.length/5;if(ns){const a=new THREE.InstancedMesh(GEO.sig,MAT.sigPole,ns),b=new THREE.InstancedMesh(GEO.sigBox,MAT.sigLamp,ns);
   const lamps=[0,1].map(g=>GEO.sigLamp.map((lg,ci)=>{const im=new THREE.InstancedMesh(lg,MAT.sigL[g][ci],ns);im.count=0;return im;}));
-  for(let q=0;q<ns;q++){dummy.position.set(SG[q*5],SG[q*5+1],SG[q*5+2]);dummy.rotation.set(0,SG[q*5+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();a.setMatrixAt(q,dummy.matrix);b.setMatrixAt(q,dummy.matrix);
+  for(let q=0;q<ns;q++){SG[q*5+1]=snap(SG[q*5],SG[q*5+1],SG[q*5+2]);dummy.position.set(SG[q*5],SG[q*5+1],SG[q*5+2]);dummy.rotation.set(0,SG[q*5+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();a.setMatrixAt(q,dummy.matrix);b.setMatrixAt(q,dummy.matrix);
    for(const im of lamps[SG[q*5+4]|0]){im.setMatrixAt(im.count++,dummy.matrix);}}
   a.castShadow=true;a.computeBoundingSphere();b.computeBoundingSphere();rise.add(a,b);for(const g of lamps)for(const im of g)if(im.count){im.computeBoundingSphere();rise.add(im);}}
  scene.add(grp);
@@ -1593,19 +1600,26 @@ function forSegs(x,z,r,kind,fn){qid++;const a=tileOf(x-r-140,z-r-140),b=tileOf(x
 function proj(x,z,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,l=dx*dx+dz*dz;let t=l?((x-ax)*dx+(z-az)*dz)/l:0;t=Math.max(0,Math.min(1,t));const px=ax+dx*t,pz=az+dz*t;return{t,px,pz,d:Math.hypot(x-px,z-pz)};}
 /* ---------- fizika = látvány: az autó pontosan azokon a háromszögeken gurul, amik a képernyőn látszanak ---------- */
 const COLC=8;
-function buildCol(srcs){const T=[],g=new Map();
- for(const [p,idx] of srcs){if(!p||!p.length)continue;const n=idx?idx.length:p.length/3;
+function buildCol(srcs){const T=[],g=new Map(),SRC=[];let si=-1;
+ for(const [p,idx] of srcs){si++;if(!p||!p.length)continue;const n=idx?idx.length:p.length/3;
   for(let t=0;t<n;t+=3){const ia=idx?idx[t]:t,ib=idx?idx[t+1]:t+1,ic=idx?idx[t+2]:t+2,ax=p[ia*3],ay=p[ia*3+1],az=p[ia*3+2],bx=p[ib*3],by=p[ib*3+1],bz=p[ib*3+2],cx=p[ic*3],cy=p[ic*3+1],cz=p[ic*3+2];
    const ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az,nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,nl=Math.hypot(nx,ny,nz);if(nl<1e-6||Math.abs(ny)/nl<.3)continue;// függőleges felület nem talaj
-   const id=T.length/9;T.push(ax,ay,az,bx,by,bz,cx,cy,cz);
+   const id=T.length/9;T.push(ax,ay,az,bx,by,bz,cx,cy,cz);SRC.push(si);
    for(let a=Math.floor(Math.min(ax,bx,cx)/COLC);a<=Math.floor(Math.max(ax,bx,cx)/COLC);a++)for(let b=Math.floor(Math.min(az,bz,cz)/COLC);b<=Math.floor(Math.max(az,bz,cz)/COLC);b++){const k=a*100003+b;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(id);}}}
- return {T:new Float32Array(T),g};}
-function meshSurf(x,z,cy){let best=-1e9,low=1e9,any=false;const k=Math.floor(x/COLC)*100003+Math.floor(z/COLC);
- for(const ch of chunks.values()){if(!ch.col||ch.state!=='ready'||rectD(ch.rect,x,z)>14)continue;const l=ch.col.g.get(k);if(!l)continue;const T=ch.col.T;
+ return {T:new Float32Array(T),g,S:Uint8Array.from(SRC)};}
+// hibakereséshez: egy pont alatti összes talaj-háromszög magassága és forrása (0 terep, 1-3 út, 4 járda, 5 sínágy)
+function surfDbg(x,z){const o=[],k=Math.floor(x/COLC)*100003+Math.floor(z/COLC);for(const ch of chunks.values()){if(!ch.col)continue;const l=ch.col.g.get(k);if(!l)continue;const T=ch.col.T;for(const id of l){const q=id*9,ax=T[q],az=T[q+2],bx=T[q+3],bz=T[q+5],cx=T[q+6],cz=T[q+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;o.push([+(w1*T[q+1]+w2*T[q+4]+w3*T[q+7]).toFixed(2),ch.col.S[id],ch.key]);}}return o;}
+// talajmagasság: ha úttest van a kerék alatt, az autó a saját magasságához legközelebbi úttesten marad (az egymásba lógó út- és járdadarabok nem dobálják);
+// úttest nélkül a legmagasabb elérhető felület (terep, járda, padka)
+function meshSurf(x,z,cy,top){let best=-1e9,low=1e9,any=false,rb=null,pb=null;const k=Math.floor(x/COLC)*100003+Math.floor(z/COLC);
+ for(const ch of chunks.values()){if(!ch.col||ch.state!=='ready'||rectD(ch.rect,x,z)>14)continue;const l=ch.col.g.get(k);if(!l)continue;const T=ch.col.T,S=ch.col.S;
   for(const id of l){const o=id*9,ax=T[o],az=T[o+2],bx=T[o+3],bz=T[o+5],cx=T[o+6],cz=T[o+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;
    const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;
-   const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];any=true;if(y<=cy+.6&&y>best)best=y;if(y<low)low=y;}}
- if(!any)return null;return best>-1e9?best:low;}
+   const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];any=true;if(y<low)low=y;if(y>cy+.6)continue;if(y>best)best=y;
+   const sr=S?S[id]:0;if(!top&&sr>=1&&sr<=3&&Math.abs(y-cy+.05)<.45){if(sr<=2){if(rb==null||y>rb)rb=y;}else if(pb==null||y>pb)pb=y;}}}
+ if(!any)return null;if(rb!=null)return rb;if(pb!=null)return pb;return best>-1e9?best:low;}
+function colTop(col,x,z,cy){const l=col.g.get(Math.floor(x/COLC)*100003+Math.floor(z/COLC));if(!l)return null;const T=col.T;let best=null;for(const id of l){const o=id*9,ax=T[o],az=T[o+2],bx=T[o+3],bz=T[o+5],cx=T[o+6],cz=T[o+8],d=(bz-cz)*(ax-cx)+(cx-bx)*(az-cz);if(Math.abs(d)<1e-9)continue;const w1=((bz-cz)*(x-cx)+(cx-bx)*(z-cz))/d,w2=((cz-az)*(x-cx)+(ax-cx)*(z-cz))/d,w3=1-w1-w2;if(w1<-1e-4||w2<-1e-4||w3<-1e-4)continue;const y=w1*T[o+1]+w2*T[o+4]+w3*T[o+7];if(y<=cy&&(best==null||y>best))best=y;}return best;}
+function topSurf(x,z,cy){return meshSurf(x,z,cy,true);}// tárgyak (fa, lámpa, tábla) a látható legfelső felületre
 function surfaceAt(x,z,cy){const ms=meshSurf(x,z,cy);if(ms!==null)return ms;let h=terrainH(x,z);if(isNaN(h))h=cy;let deck=-1e9,road=null,rd=1e9;
  forSegs(x,z,12,0,(a,k)=>{const r=proj(x,z,a[k],a[k+1],a[k+3],a[k+4]),dy=a[k+2]+(a[k+5]-a[k+2])*r.t;
   if(a[k+7]){if(r.d<=a[k+6]+.4&&dy>h-.3&&dy<=cy+1.3&&dy>deck)deck=dy;return;}
@@ -1766,7 +1780,7 @@ function resetCar(atOrigin){const x0=atOrigin?0:car.x,z0=atOrigin?0:car.z;let be
 function trySpawn(){if(car.spawned)return;const t=tileOf(0,0),ch=chunks.get(t[0]+','+t[1]);if(ch&&ch.state==='ready')resetCar(true);}
 
 /* ---------- forgalom ---------- */
-const traffic=[],trams=[];let aiSpawnT=0;
+const traffic=[],trams=[];let aiSpawnT=0;const TST={flip:0,gone:0};// forgalom-statisztika a tesztekhez
 function segDir(a,k,dir){const ax=dir>0?a[k]:a[k+3],az=dir>0?a[k+1]:a[k+4],bx=dir>0?a[k+3]:a[k],bz=dir>0?a[k+4]:a[k+1];return[ax,az,bx,bz];}
 function place(c,S){const a=c.ch[S===RS?'rseg':'tseg'],k=c.k,[ax,az,bx,bz]=segDir(a,k,c.dir),ay=c.dir>0?a[k+2]:a[k+5],by=c.dir>0?a[k+5]:a[k+2];
  const dx=bx-ax,dz=bz-az,L=Math.hypot(dx,dz)||.01,ux=dx/L,uz=dz/L;c.L=L;c.ux=ux;c.uz=uz;
@@ -1823,7 +1837,7 @@ function updTraffic(dt){wantT-=dt;if(wantT<=0){wantT=2;trafficTarget();}aiSpawnT
   c.sigT=(c.sigT||0)-dt;if(c.sigT<=0){c.sigT=.2+Math.random()*.1;c.sigL=sigLimit(c,fx,fz);}if(c.sigL!=null)tgt=Math.min(tgt,c.sigL);
   if(c.stop>0){c.stop-=dt;tgt=0;}c.turn=Math.max(0,c.turn-dt);
   c.v+=Math.max(-8.5*dt,Math.min((c.v<4?2.6:1.9)*dt,tgt-c.v));
-  if(!advance(c,c.v*dt,RS)){if(!c.ch.rseg[c.k+10]){c.dir=-c.dir;c.t=0;place(c,RS);}else{traffic.splice(i,1);continue;}}
+  if(!advance(c,c.v*dt,RS)){if(!c.ch.rseg[c.k+10]){c.dir=-c.dir;c.t=0;place(c,RS);TST.flip++;}else{traffic.splice(i,1);TST.gone++;continue;}}
   const k=1-Math.exp(-dt*10);c.x+=(c.tx_-c.x)*k;c.z+=(c.tz_-c.z)*k;c.y+=(c.ty_-c.y)*k;c.vh+=wrap(Math.atan2(c.ux,c.uz)-c.vh)*Math.min(1,dt*6);}
  const cnt=AITYPES.map(()=>0);
  for(const c of traffic){const m=aiMeshes[c.type],i=cnt[c.type]++;if(i>=90)continue;dummy.position.set(c.x,c.y,c.z);dummy.rotation.set(0,c.vh,0);dummy.scale.set(1,1,1);dummy.updateMatrix();
@@ -2280,7 +2294,7 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/
  perfTick(dt);}
 applyCfg();let autoT=0;setInterval(()=>{if(CFG.autoTime){const k=autoTimeIdx();if(k!==tIdx){tIdx=(k+TIMES.length-1)%TIMES.length;nextTime();}}},5000);
 requestAnimationFrame(loop);
-window.__vj={surfaceAt,SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
+window.__vj={surfDbg,colTop,meshSurf,TST,surfaceAt,SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
  time:k=>{tIdx=k;tK=1;Object.assign(tCur,pack(TIMES[k]));applyTime(0);},setRoute,toggleMap,get route(){return route;},crime:(n,m)=>crime(n,m),police,physics,GB,setCar:i=>setCar(i,carCol),jump:(a,b)=>jump(a,b,"teszt"),startMission,get wanted(){return wanted;},lightState,toLL,toXZ};
 try{$('ver').textContent='Világjáró '+VERSION;}catch(e){}
 </script>

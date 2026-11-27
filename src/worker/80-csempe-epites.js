@@ -544,6 +544,12 @@ async function build(tx,ty,g,rebuild){
   if(cls===0&&hw>3.4){line(hw-.35,false);line(-(hw-.35),false);}}
  const nearRY=(x,z,r)=>{let best=null,bd=r;for(const dx of [-16,0,16])for(const dz of [-16,0,16]){const l=rgrid.get(Math.floor((x+dx)/16)*100003+Math.floor((z+dz)/16));if(!l)continue;for(const k of l){if(rseg[k+9]>1||rseg[k+7])continue;const ax=rseg[k],az=rseg[k+1],ddx=rseg[k+3]-ax,ddz=rseg[k+4]-az,l2=ddx*ddx+ddz*ddz||1,t=Math.max(0,Math.min(1,((x-ax)*ddx+(z-az)*ddz)/l2)),d=Math.hypot(x-ax-ddx*t,z-az-ddz*t)-rseg[k+6];if(d<bd){bd=d;best=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;}}}return best;};// a külön járda a mellette futó út szintjén
  for(const g2 of dSide){if(g2.length<2)continue;runs(g2,cum(g2),4,6,run=>{const ry=p=>{const y=nearRY(p[0],p[1],7);return y!=null?y+.12:HS(p[0],p[1])+.1;};ribbon(SW,run,1.25,ry,0,10);for(const q of run)RFP.push(q[0],q[1],q[3],1.25);SHQ.push([run.map(q=>q.slice()),1.25]);});}
+ // ---- egy pálya: átfedő út-szalagok egy szintre hozása (lépcső helyett folytonos felület) ----
+ {const cov=(x,z,y,inset)=>{let best=null;const l=rgrid.get(Math.floor(x/16)*100003+Math.floor(z/16));if(!l)return null;for(const k of l){if(rseg[k+7]||rseg[k+9]>1)continue;const ax=rseg[k],az=rseg[k+1],dx=rseg[k+3]-ax,dz=rseg[k+4]-az,l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/l2)),d=Math.hypot(x-ax-dx*t,z-az-dz*t);
+    if(d>rseg[k+6]-inset)continue;const ry=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;if(Math.abs(ry-y)>.6)continue;if(best==null||ry>best)best=ry;}return best;};
+  const lift=(B,add,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1]-add,inset);if(c!=null&&c+add>P[v+1])P[v+1]=c+add;}};
+  const sink=(B,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1],inset);if(c!=null&&P[v+1]>c-.04)P[v+1]=c-.04;}};
+  lift(R[0],0,-.05);lift(R[1],0,-.05);lift(MS,.02,-.05);lift(MD,.02,-.05);sink(R[2],.15);sink(SW,.35);}
  for(const q of dSig){if(!inC(q[0],q[1]))continue;const near=[];for(const dx of [-16,0,16])for(const dz of [-16,0,16]){const l=th.get(Math.floor((q[0]+dx)/16)*100003+Math.floor((q[1]+dz)/16));if(l)for(const e of l)if(segD(q[0],q[1],e[0],e[1],e[2],e[3])<10&&!near.includes(e))near.push(e);}
   if(!near.length)continue;near.sort((a,b)=>b[4]-a[4]);const A=near[0];let ux=A[2]-A[0],uz=A[3]-A[1];const ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;const nx=-uz,nz=ux;
   let hB=0;for(const e of near){const ex=e[2]-e[0],ez=e[3]-e[1],el=Math.hypot(ex,ez)||1;if(Math.abs((ex*ux+ez*uz)/el)<.5){hB=Math.max(hB,e[4]);}}

@@ -23,14 +23,15 @@ function onChunk(m){if(m.gen!==gen)return;const key=m.tx+','+m.ty,ch=chunks.get(
  if(ch.state==='loading')inflight--;else if(ch.state==='ready'&&ch.rebuilding&&m.rebuild){swap=true;ch.rebuilding=false;}else return;
  const oldGrp=ch.grp;
  const grp=new THREE.Group(),rise=new THREE.Group();grp.add(rise);
- const Gd=m.ground;ch.col=buildCol([[Gd.p,Gd.i],...m.roads.map(r=>[r.p,r.i]),[m.walk.p,m.walk.i],[m.bed.p,m.bed.i]]);const gm=mesh(geo({position:[Gd.p,3],color:[Gd.c,3],uv:[Gd.u,2]},Gd.i),MAT.ground);gm.geometry.computeVertexNormals();{const nn=gm.geometry.attributes.normal.array;for(let q=Gd.nV*3;q<nn.length;q+=3){nn[q]=0;nn[q+1]=1;nn[q+2]=0;}}grp.add(gm);
+ const Gd=m.ground;ch.col=buildCol([[Gd.p,Gd.i],...m.roads.map(r=>[r.p,r.i]),[m.walk.p,m.walk.i]]);// a sínágy nem talaj: a villamospálya az úttesttel egy szintben gurul
+ const snap=(x,y,z)=>{const v=colTop(ch.col,x,z,y+2.6);return v==null?y:v;};// fák, lámpák, táblák pontosan a látható felületenconst gm=mesh(geo({position:[Gd.p,3],color:[Gd.c,3],uv:[Gd.u,2]},Gd.i),MAT.ground);gm.geometry.computeVertexNormals();{const nn=gm.geometry.attributes.normal.array;for(let q=Gd.nV*3;q<nn.length;q+=3){nn[q]=0;nn[q+1]=1;nn[q+2]=0;}}grp.add(gm);
  const rib=(b,mat,ro,uv=true)=>{if(!b.p.length)return;const at={position:[b.p,3],normal:[upN(b.p),3]};if(uv&&b.u)at.uv=[b.u,2];grp.add(mesh(geo(at,b.i),mat,{ro}));};
  rib(m.walk,MAT.walk,1);if(m.ms.p.length)rib(m.ms,MAT.mark,6,false);if(m.md.p.length)rib(m.md,MAT.markD,6);m.roads.forEach((r,k)=>rib(r,MAT.road[k],[4,3,2][k]));rib(m.bed,MAT.bed,2,false);rib(m.rail,MAT.rail,5,false);
  if(m.water.p.length){const p=m.water.p,uv=new Float32Array(p.length/3*2);for(let q=0,v=0;q<p.length;q+=3,v+=2){uv[v]=p[q]/14;uv[v+1]=p[q+2]/14;}grp.add(mesh(geo({position:[p,3],uv:[uv,2],normal:[upN(p),3]},m.water.i),MAT.water));}
  if(m.bridge.p.length)grp.add(mesh(geo({position:[m.bridge.p,3],normal:[m.bridge.n,3]}),MAT.bridge,{cast:1}));
  if(m.signs&&m.signs.length){const S=m.signs,by=new Map();for(let k=0;k<S.length;k+=5){const c=S[k+4];if(!by.has(c))by.set(c,[]);by.get(c).push(k);}
   const np=S.length/5,pole=new THREE.InstancedMesh(signPole,MAT.pole,np),back=new THREE.InstancedMesh(signBack,signBackMat,np);let j=0;
-  for(const [code,ks] of by){const face=new THREE.InstancedMesh(signGeo,signMat(code),ks.length);ks.forEach((k,i)=>{dummy.position.set(S[k],S[k+1],S[k+2]);dummy.rotation.set(0,S[k+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();face.setMatrixAt(i,dummy.matrix);pole.setMatrixAt(j,dummy.matrix);back.setMatrixAt(j++,dummy.matrix);});face.computeBoundingSphere();grp.add(face);}
+  for(const [code,ks] of by){const face=new THREE.InstancedMesh(signGeo,signMat(code),ks.length);ks.forEach((k,i)=>{S[k+1]=snap(S[k],S[k+1],S[k+2]);dummy.position.set(S[k],S[k+1],S[k+2]);dummy.rotation.set(0,S[k+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();face.setMatrixAt(i,dummy.matrix);pole.setMatrixAt(j,dummy.matrix);back.setMatrixAt(j++,dummy.matrix);});face.computeBoundingSphere();grp.add(face);}
   pole.computeBoundingSphere();back.computeBoundingSphere();grp.add(pole,back);}
  const wallM={};if(m.wu.p.length){wallM[0]=mesh(geo({position:[m.wu.p,3],normal:[m.wu.n,3],uv:[m.wu.u,2],color:[m.wu.c,3]}),MAT.wu,{cast:1});rise.add(wallM[0]);}
  if(m.wg.p.length)rise.add(mesh(geo({position:[m.wg.p,3],normal:[m.wg.n,3],uv:[m.wg.u,2]}),MAT.wg,{cast:1}));
@@ -41,19 +42,19 @@ function onChunk(m){if(m.gen!==gen)return;const key=m.tx+','+m.ty,ch=chunks.get(
  if(m.roofs.p.length)rise.add(mesh(geo({position:[m.roofs.p,3],normal:[m.roofs.n,3],color:[m.roofs.c,3]}),MAT.roof,{cast:1}));
  const T=m.trees,nt=T.length/5;let trees=null;
  if(nt){trees={n:nt,M:new Float32Array(nt*16),C:new Float32Array(nt*3),K:new Uint8Array(nt),P:new Float32Array(nt*4)};
-  for(let q=0;q<nt;q++){const s=T[q*5+3];dummy.position.set(T[q*5],T[q*5+1]-.15,T[q*5+2]);dummy.rotation.set(0,Math.random()*6.28,0);dummy.scale.set(s,s*(.85+Math.random()*.3),s);dummy.updateMatrix();dummy.matrix.toArray(trees.M,q*16);
+  for(let q=0;q<nt;q++){const s=T[q*5+3];T[q*5+1]=snap(T[q*5],T[q*5+1],T[q*5+2]);dummy.position.set(T[q*5],T[q*5+1]-.15,T[q*5+2]);dummy.rotation.set(0,Math.random()*6.28,0);dummy.scale.set(s,s*(.85+Math.random()*.3),s);dummy.updateMatrix();dummy.matrix.toArray(trees.M,q*16);
    trees.K[q]=T[q*5+4]?1:0;if(T[q*5+4])tcol.setHSL(.38+Math.random()*.05,.35,.26+Math.random()*.06);else tcol.setHSL(.22+Math.random()*.08,.42+Math.random()*.15,.36+Math.random()*.1);tcol.toArray(trees.C,q*3);
    trees.P[q*4]=T[q*5];trees.P[q*4+1]=T[q*5+1];trees.P[q*4+2]=T[q*5+2];trees.P[q*4+3]=s;}
   {const cells=new Map();for(let q=0;q<nt;q++){const k=Math.floor(trees.P[q*4]/64)*100003+Math.floor(trees.P[q*4+2]/64);let l=cells.get(k);if(!l)cells.set(k,l=[]);l.push(q);}
    trees.cells=[...cells.values()].map(l=>{let x=0,y=0,z=0;for(const q of l){x+=trees.P[q*4];y+=trees.P[q*4+1];z+=trees.P[q*4+2];}return{x:x/l.length,y:y/l.length,z:z/l.length,idx:Int32Array.from(l)};});}}TREE.dirty=true;
  const L=m.lamps,nl=L.length/4;
  if(nl){const pl=new THREE.InstancedMesh(GEO.pole,MAT.pole,nl),he=new THREE.InstancedMesh(GEO.head,MAT.lampHead,nl),pool=new THREE.InstancedMesh(GEO.pool,MAT.pool,nl);
-  for(let q=0;q<nl;q++){dummy.position.set(L[q*4],L[q*4+1],L[q*4+2]);dummy.rotation.set(0,L[q*4+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();pl.setMatrixAt(q,dummy.matrix);he.setMatrixAt(q,dummy.matrix);
+  for(let q=0;q<nl;q++){L[q*4+1]=snap(L[q*4],L[q*4+1],L[q*4+2]);dummy.position.set(L[q*4],L[q*4+1],L[q*4+2]);dummy.rotation.set(0,L[q*4+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();pl.setMatrixAt(q,dummy.matrix);he.setMatrixAt(q,dummy.matrix);
    dummy.position.set(L[q*4]+Math.sin(L[q*4+3])*1.5,L[q*4+1]+.25,L[q*4+2]+Math.cos(L[q*4+3])*1.5);dummy.updateMatrix();pool.setMatrixAt(q,dummy.matrix);}
   pl.castShadow=true;for(const im of [pl,he,pool])im.computeBoundingSphere();rise.add(pl,he);grp.add(pool);}
  const SG=m.sig,ns=SG.length/5;if(ns){const a=new THREE.InstancedMesh(GEO.sig,MAT.sigPole,ns),b=new THREE.InstancedMesh(GEO.sigBox,MAT.sigLamp,ns);
   const lamps=[0,1].map(g=>GEO.sigLamp.map((lg,ci)=>{const im=new THREE.InstancedMesh(lg,MAT.sigL[g][ci],ns);im.count=0;return im;}));
-  for(let q=0;q<ns;q++){dummy.position.set(SG[q*5],SG[q*5+1],SG[q*5+2]);dummy.rotation.set(0,SG[q*5+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();a.setMatrixAt(q,dummy.matrix);b.setMatrixAt(q,dummy.matrix);
+  for(let q=0;q<ns;q++){SG[q*5+1]=snap(SG[q*5],SG[q*5+1],SG[q*5+2]);dummy.position.set(SG[q*5],SG[q*5+1],SG[q*5+2]);dummy.rotation.set(0,SG[q*5+3],0);dummy.scale.set(1,1,1);dummy.updateMatrix();a.setMatrixAt(q,dummy.matrix);b.setMatrixAt(q,dummy.matrix);
    for(const im of lamps[SG[q*5+4]|0]){im.setMatrixAt(im.count++,dummy.matrix);}}
   a.castShadow=true;a.computeBoundingSphere();b.computeBoundingSphere();rise.add(a,b);for(const g of lamps)for(const im of g)if(im.count){im.computeBoundingSphere();rise.add(im);}}
  scene.add(grp);

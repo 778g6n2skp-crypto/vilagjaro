@@ -18,6 +18,6 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/
  perfTick(dt);}
 applyCfg();let autoT=0;setInterval(()=>{if(CFG.autoTime){const k=autoTimeIdx();if(k!==tIdx){tIdx=(k+TIMES.length-1)%TIMES.length;nextTime();}}},5000);
 requestAnimationFrame(loop);
-window.__vj={surfaceAt,SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
+window.__vj={surfDbg,colTop,meshSurf,TST,surfaceAt,SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
  time:k=>{tIdx=k;tK=1;Object.assign(tCur,pack(TIMES[k]));applyTime(0);},setRoute,toggleMap,get route(){return route;},crime:(n,m)=>crime(n,m),police,physics,GB,setCar:i=>setCar(i,carCol),jump:(a,b)=>jump(a,b,"teszt"),startMission,get wanted(){return wanted;},lightState,toLL,toXZ};
 try{$('ver').textContent='Világjáró '+VERSION;}catch(e){}

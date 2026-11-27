@@ -1,5 +1,5 @@
 /* ---------- forgalom ---------- */
-const traffic=[],trams=[];let aiSpawnT=0;
+const traffic=[],trams=[];let aiSpawnT=0;const TST={flip:0,gone:0};// forgalom-statisztika a tesztekhez
 function segDir(a,k,dir){const ax=dir>0?a[k]:a[k+3],az=dir>0?a[k+1]:a[k+4],bx=dir>0?a[k+3]:a[k],bz=dir>0?a[k+4]:a[k+1];return[ax,az,bx,bz];}
 function place(c,S){const a=c.ch[S===RS?'rseg':'tseg'],k=c.k,[ax,az,bx,bz]=segDir(a,k,c.dir),ay=c.dir>0?a[k+2]:a[k+5],by=c.dir>0?a[k+5]:a[k+2];
  const dx=bx-ax,dz=bz-az,L=Math.hypot(dx,dz)||.01,ux=dx/L,uz=dz/L;c.L=L;c.ux=ux;c.uz=uz;
@@ -56,7 +56,7 @@ function updTraffic(dt){wantT-=dt;if(wantT<=0){wantT=2;trafficTarget();}aiSpawnT
   c.sigT=(c.sigT||0)-dt;if(c.sigT<=0){c.sigT=.2+Math.random()*.1;c.sigL=sigLimit(c,fx,fz);}if(c.sigL!=null)tgt=Math.min(tgt,c.sigL);
   if(c.stop>0){c.stop-=dt;tgt=0;}c.turn=Math.max(0,c.turn-dt);
   c.v+=Math.max(-8.5*dt,Math.min((c.v<4?2.6:1.9)*dt,tgt-c.v));
-  if(!advance(c,c.v*dt,RS)){if(!c.ch.rseg[c.k+10]){c.dir=-c.dir;c.t=0;place(c,RS);}else{traffic.splice(i,1);continue;}}
+  if(!advance(c,c.v*dt,RS)){if(!c.ch.rseg[c.k+10]){c.dir=-c.dir;c.t=0;place(c,RS);TST.flip++;}else{traffic.splice(i,1);TST.gone++;continue;}}
   const k=1-Math.exp(-dt*10);c.x+=(c.tx_-c.x)*k;c.z+=(c.tz_-c.z)*k;c.y+=(c.ty_-c.y)*k;c.vh+=wrap(Math.atan2(c.ux,c.uz)-c.vh)*Math.min(1,dt*6);}
  const cnt=AITYPES.map(()=>0);
  for(const c of traffic){const m=aiMeshes[c.type],i=cnt[c.type]++;if(i>=90)continue;dummy.position.set(c.x,c.y,c.z);dummy.rotation.set(0,c.vh,0);dummy.scale.set(1,1,1);dummy.updateMatrix();
