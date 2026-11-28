@@ -904,6 +904,16 @@ async function build(tx,ty,g,rebuild){
      P[ei]=tp;}});
    // a beszúrandó közös pontok (szegmensenként távolság szerint rendezve, hátulról előre, hogy az indexek ne csússzanak)
    ins.sort((A,B)=>A[0]-B[0]||B[1]-A[1]||B[2]-A[2]);for(const [mj,i,t,tp] of ins)lines[mj].L.splice(i,0,tp);}
+  // hiányzó csomópontok: a z14 egyszerűsítés gyakran elveszi a kereszteződő utak közös pontját – a ténylegesen metsződő (azonos szintű, nem híd/alagút) autós utak metszéspontja mindkét vonalba bekerül
+  {const drv=pr=>{const c=(pr.class||'').replace('_construction','');return !(c==='rail'||c==='transit'||c==='path'||c==='ferry'||c==='pier'||c==='aerialway')&&pr.brunnel!=='bridge'&&pr.brunnel!=='tunnel';};
+   const SK=24,sg=new Map();lines.forEach((l,li)=>{if(!drv(l.pr))return;const P=l.L;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i];for(let gx=Math.floor(Math.min(a[0],b[0])/SK);gx<=Math.floor(Math.max(a[0],b[0])/SK);gx++)for(let gz=Math.floor(Math.min(a[1],b[1])/SK);gz<=Math.floor(Math.max(a[1],b[1])/SK);gz++){const k=gx*100003+gz;let q=sg.get(k);if(!q)sg.set(k,q=[]);q.push(li,i);}}});
+   const ins=new Map(),seen=new Set(),near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1])<.8;
+   for(const lst of sg.values())for(let u=0;u<lst.length;u+=2)for(let w=u+2;w<lst.length;w+=2){const li=lst[u],i=lst[u+1],lj=lst[w],j=lst[w+1];if(li===lj)continue;const key=li<lj?li+'_'+i+'_'+lj+'_'+j:lj+'_'+j+'_'+li+'_'+i;if(seen.has(key))continue;seen.add(key);
+     const A=lines[li],B=lines[lj];if((A.pr.layer||0)!==(B.pr.layer||0))continue;const a=A.L[i-1],b=A.L[i],c=B.L[j-1],d=B.L[j];
+     const r1=[b[0]-a[0],b[1]-a[1]],r2=[d[0]-c[0],d[1]-c[1]],den=r1[0]*r2[1]-r1[1]*r2[0];if(Math.abs(den)<1e-9)continue;const t=((c[0]-a[0])*r2[1]-(c[1]-a[1])*r2[0])/den,v=((c[0]-a[0])*r1[1]-(c[1]-a[1])*r1[0])/den;if(t<=0||t>=1||v<=0||v>=1)continue;
+     const p=[a[0]+r1[0]*t,a[1]+r1[1]*t];if(near(p,a)||near(p,b)||near(p,c)||near(p,d))continue;
+     for(const [lk,ik,tt] of [[li,i,t],[lj,j,v]]){let l2=ins.get(lk);if(!l2)ins.set(lk,l2=[]);l2.push([ik,tt,p]);}}
+   for(const [lk,arr] of ins){arr.sort((A,B)=>B[0]-A[0]||B[1]-A[1]);const L2=lines[lk].L;for(const [ik,tt,p] of arr)L2.splice(ik,0,[p[0],p[1]]);}}
   // íves vonalvezetés: a leegyszerűsített törtvonal töréspontjai lekerekítve (osztályonkénti ívsugár), a csomópontok és a végek helyben maradnak
   const RAD={motorway:180,trunk:120,primary:45,secondary:35,tertiary:25,minor:14,service:8,track:10,path:4,rail:220,transit:60,raceway:40,busway:25};
   const vk=q=>Math.round(q[0]*2)*1000003+Math.round(q[1]*2),cnt=new Map();for(const l of lines)l.L.forEach((q,i)=>{const k=vk(q);cnt.set(k,(cnt.get(k)||0)+((i===0||i===l.L.length-1)?2:1));});
@@ -1067,7 +1077,7 @@ async function build(tx,ty,g,rebuild){
     if(d>rseg[k+6]-inset)continue;const ry=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;if(Math.abs(ry-y)>.6)continue;if(best==null||ry>best)best=ry;}return best;};
   const lift=(B,add,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1]-add,inset);if(c!=null&&c+add>P[v+1])P[v+1]=c+add;}};
   const sink=(B,inset)=>{const P=B.p;for(let v=0;v<P.length;v+=3){const c=cov(P[v],P[v+2],P[v+1],inset);if(c!=null&&P[v+1]>c-.04)P[v+1]=c-.04;}};
-  lift(R[0],0,-.05);lift(R[1],0,-.05);lift(MS,.02,-.05);lift(MD,.02,-.05);sink(R[2],.15);sink(SW,.35);sink(BED,.1);}
+  sink(R[2],.15);sink(SW,.35);sink(BED,.1);}
  for(const q of dSig){if(!inC(q[0],q[1]))continue;const near=[];for(const dx of [-16,0,16])for(const dz of [-16,0,16]){const l=th.get(Math.floor((q[0]+dx)/16)*100003+Math.floor((q[1]+dz)/16));if(l)for(const e of l)if(segD(q[0],q[1],e[0],e[1],e[2],e[3])<10&&!near.includes(e))near.push(e);}
   if(!near.length)continue;near.sort((a,b)=>b[4]-a[4]);const A=near[0];let ux=A[2]-A[0],uz=A[3]-A[1];const ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;const nx=-uz,nz=ux;
   let hB=0;for(const e of near){const ex=e[2]-e[0],ez=e[3]-e[1],el=Math.hypot(ex,ez)||1;if(Math.abs((ex*ux+ez*uz)/el)<.5){hB=Math.max(hB,e[4]);}}
@@ -1145,21 +1155,23 @@ async function build(tx,ty,g,rebuild){
  /* a terep az út alatt mindig a burkolat alá kerül: minden rácspont, amelynek háromszöge az út lábnyomát érinti, legalább 30 cm-rel lejjebb */
  const cmL0=40075016.7*Math.cos(LA*Math.PI/180)/NT/G;
  const lowerRFP=(fR)=>{for(let k=0;k<RFP.length;k+=4){const x=RFP[k],z=RFP[k+1],y=RFP[k+2]-.3,R2=RFP[k+3]+cmL0*fR,c0=(lon2fx(LO+x/ML)-tx)*G,r0=(lat2fy(LA-z/MLAT)-ty)*G,rr=Math.ceil(R2/cmL0);
-  for(let r=Math.max(0,Math.floor(r0-rr));r<=Math.min(G,Math.ceil(r0+rr));r++)for(let c=Math.max(0,Math.floor(c0-rr));c<=Math.min(G,Math.ceil(c0+rr));c++){const i=r*(G+1)+c;if(wm[i])continue;if(Math.hypot(c-c0,r-r0)*cmL0<=R2&&hg[i]>y)hg[i]=y;}}};lowerRFP(1.45);
- // egy közös felület: az utak környezetében a terep az úthoz simul – a lábnyomban pontosan a burkolat alatt (emelve vagy süllyesztve), azon túl 10 m-en át lágyan vissza az eredeti domborzatra
- {const GG=G+1,B=10,bw=new Float32Array(GG*GG),bt=new Float32Array(GG*GG),NX=new Float32Array(GG),NZ=new Float32Array(GG);for(let c=0;c<=G;c++)NX[c]=X(fx2lon(tx+c/G));for(let r=0;r<=G;r++)NZ[r]=Zf(fy2lat(ty+r/G));
-  const gc=x=>(lon2fx(LO+x/ML)-tx)*G,gr=z=>(lat2fy(LA-z/MLAT)-ty)*G;
-  for(const [pts,he] of SHQ){const R=he+cmL0*.75,ext=(R+B)/cmL0+1;for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],ca=gc(a[0]),cb=gc(b[0]),ra=gr(a[1]),rb=gr(b[1]);
-    const c0=Math.max(0,Math.floor(Math.min(ca,cb)-ext)),c1=Math.min(G,Math.ceil(Math.max(ca,cb)+ext)),r0=Math.max(0,Math.floor(Math.min(ra,rb)-ext)),r1=Math.min(G,Math.ceil(Math.max(ra,rb)+ext));if(c0>c1||r0>r1)continue;
-    const dx=b[0]-a[0],dz=b[1]-a[1],l2=dx*dx+dz*dz||1;
-    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=r*GG+c;if(wm[i])continue;const px=NX[c]-a[0],pz=NZ[r]-a[1],t=Math.max(0,Math.min(1,(px*dx+pz*dz)/l2)),d=Math.hypot(px-dx*t,pz-dz*t);if(d>R+B)continue;
-     const y=a[3]+(b[3]-a[3])*t-.3,w=d<=R?1:1-(d-R)/B;if(w>bw[i]+1e-6){bw[i]=w;bt[i]=y;}else if(w>=1&&bw[i]>=1&&y<bt[i])bt[i]=y;}}}
-  const bm=new Uint8Array(GG*GG);for(let k=0;k<rseg.length;k+=14){if(!rseg[k+7])continue;const ax=rseg[k],az=rseg[k+1],bx=rseg[k+3],bz=rseg[k+4],Rb=rseg[k+6]+8,ext=Rb/cmL0+1,ca=gc(ax),cb=gc(bx),ra=gr(az),rb2=gr(bz);
-   const c0=Math.max(0,Math.floor(Math.min(ca,cb)-ext)),c1=Math.min(G,Math.ceil(Math.max(ca,cb)+ext)),r0=Math.max(0,Math.floor(Math.min(ra,rb2)-ext)),r1=Math.min(G,Math.ceil(Math.max(ra,rb2)+ext));const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz||1;
-   for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const px=NX[c]-ax,pz=NZ[r]-az,t=Math.max(0,Math.min(1,(px*dx+pz*dz)/l2));if(Math.hypot(px-dx*t,pz-dz*t)<=Rb)bm[r*GG+c]=1;}}
-  // hidak mellett/alatt a terep nem emelkedik (a híd alatti tér szabad marad, a pálya széle mellett nem bukkan fel talaj)
-  for(let i=0;i<GG*GG;i++){const w=bw[i];if(w<=0)continue;if(bm[i]&&bt[i]>hg[i])continue;const ww=w*w*(3-2*w);hg[i]+=ww*(bt[i]-hg[i]);}}
- lowerRFP(.75);// a simítás után is: minden út alatt a terep a burkolat alá kerül (nem bukkan át)
+  for(let r=Math.max(0,Math.floor(r0-rr));r<=Math.min(G,Math.ceil(r0+rr));r++)for(let c=Math.max(0,Math.floor(c0-rr));c<=Math.min(G,Math.ceil(c0+rr));c++){const i=r*(G+1)+c;if(wm[i])continue;if(Math.hypot(c-c0,r-r0)*cmL0<=R2&&hg[i]>y)hg[i]=y;}}};
+  // egy közös felület: minden rácspont a hozzá LEGKÖZELEBBI útfelület (a lábnyom szélétől mért távolság szerint) vetületi magasságához igazodik – nem a sugárban lévő útpontok minimumához (meredek úton az a terepet méterekkel az út alá vitte)
+  {const GG=G+1,B=10,N=GG*GG,ne=new Float32Array(N).fill(1e9),ny=new Float32Array(N),nh=new Float32Array(N),NX=new Float32Array(GG),NZ=new Float32Array(GG);for(let c=0;c<=G;c++)NX[c]=X(fx2lon(tx+c/G));for(let r=0;r<=G;r++)NZ[r]=Zf(fy2lat(ty+r/G));
+   const gc=x=>(lon2fx(LO+x/ML)-tx)*G,gr=z=>(lat2fy(LA-z/MLAT)-ty)*G,low=[];
+   for(const [pts,he] of SHQ){const reach=he+cmL0*1.45+B,ext=reach/cmL0+1;for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],ca=gc(a[0]),cb=gc(b[0]),ra=gr(a[1]),rb=gr(b[1]);
+     const c0=Math.max(0,Math.floor(Math.min(ca,cb)-ext)),c1=Math.min(G,Math.ceil(Math.max(ca,cb)+ext)),r0=Math.max(0,Math.floor(Math.min(ra,rb)-ext)),r1=Math.min(G,Math.ceil(Math.max(ra,rb)+ext));if(c0>c1||r0>r1)continue;
+     const dx=b[0]-a[0],dz=b[1]-a[1],l2=dx*dx+dz*dz||1;
+     for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=r*GG+c;const px=NX[c]-a[0],pz=NZ[r]-a[1],t=Math.max(0,Math.min(1,(px*dx+pz*dz)/l2)),d=Math.hypot(px-dx*t,pz-dz*t);if(d>reach)continue;
+      const y=a[3]+(b[3]-a[3])*t-.3,e=d-he;if(e<ne[i]-.5){ne[i]=e;ny[i]=y;nh[i]=he;}else if(e<=ne[i]+.5){if(y<ny[i])ny[i]=y;if(e<ne[i])ne[i]=e;}
+      if(e<=cmL0*.5)low.push(i,y);}}}
+   const bm=new Uint8Array(N);for(let k=0;k<rseg.length;k+=14){if(!rseg[k+7])continue;const ax=rseg[k],az=rseg[k+1],bx=rseg[k+3],bz=rseg[k+4],Rb=rseg[k+6]+8,ext=Rb/cmL0+1,ca=gc(ax),cb=gc(bx),ra=gr(az),rb2=gr(bz);
+    const c0=Math.max(0,Math.floor(Math.min(ca,cb)-ext)),c1=Math.min(G,Math.ceil(Math.max(ca,cb)+ext)),r0=Math.max(0,Math.floor(Math.min(ra,rb2)-ext)),r1=Math.min(G,Math.ceil(Math.max(ra,rb2)+ext));const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz||1;
+    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const px=NX[c]-ax,pz=NZ[r]-az,t=Math.max(0,Math.min(1,(px*dx+pz*dz)/l2));const by=rseg[k+2]+(rseg[k+5]-rseg[k+2])*t;if(Math.hypot(px-dx*t,pz-dz*t)<=Rb&&by-hg[r*GG+c]>2.5)bm[r*GG+c]=1;}}
+   // a legközelebbi út szintjére simítás: a lábnyom + ¾ cella teljes súllyal, azon túl 10 m-en lágyan; hidak mellett nem emel
+   for(let i=0;i<N;i++){if(ne[i]>=1e8||wm[i])continue;const R=cmL0*.75,e=ne[i],w=e<=R?1:Math.max(0,1-(e-R)/B);if(w<=0)continue;if(bm[i]&&ny[i]>hg[i])continue;const ww=w*w*(3-2*w);hg[i]+=ww*(ny[i]-hg[i]);}
+   // biztosíték: egyetlen útfelület alatt sem bukkan át a terep (a saját vetületi magasság alá)
+   for(let k=0;k<low.length;k+=2){const i=low[k];if(hg[i]>low[k+1])hg[i]=low[k+1];}}
  // a megjelenített terep pontos magassága (ugyanaz a háromszögelés, mint a hálóé)
  const MH=(x,z)=>{const cf=(lon2fx(LO+x/ML)-tx)*G,rf2=(lat2fy(LA-z/MLAT)-ty)*G;if(cf<0||rf2<0||cf>G||rf2>G)return H(x,z);const c=Math.min(G-1,Math.floor(cf)),r=Math.min(G-1,Math.floor(rf2)),u=cf-c,v=rf2-r,W1=G+1,a=hg[r*W1+c],b=hg[r*W1+c+1],d=hg[(r+1)*W1+c],f=hg[(r+1)*W1+c+1];
   return u+v<=1?a+(b-a)*u+(d-a)*v:f+(d-f)*(1-u)+(b-f)*(1-v);};
@@ -1261,7 +1273,7 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
-const VERSION='v18.1';// a build.mjs tölti ki a VERSION fájlból
+const VERSION='v19';// a build.mjs tölti ki a VERSION fájlból
 
 const MLAT=110574,TZ=14,NT=1<<TZ,G=256,CELL=20,RS=14;
 // telefonon jóval kisebb betöltési/megtartási sugár: egy z14 csempe ~1,6 km, a régi 2,3 km-es megtartással 8-9 csempe maradt a memóriában (iOS ettől újratölti a lapot)
