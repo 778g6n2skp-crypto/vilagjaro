@@ -34,11 +34,16 @@ async function bridgeProfile(tx,ty,E,R,pr,off){
  // a híd alatt keresztező utak és sínek
  const tiles=new Set();for(const q of P)tiles.add(Math.floor(lon2fx(q[0]))+','+Math.floor(lat2fy(q[1])));
  const o0=P[0],xm=q=>[(q[0]-o0[0])*kx,(q[1]-o0[1])*ky],BP=P.map(xm);
+ const MB=[1e9,-1e9,1e9,-1e9];for(const q of BP){MB[0]=Math.min(MB[0],q[0]);MB[1]=Math.max(MB[1],q[0]);MB[2]=Math.min(MB[2],q[1]);MB[3]=Math.max(MB[3],q[1]);}MB[0]-=15;MB[1]+=15;MB[2]-=15;MB[3]+=15;
+ const LB=[1e9,-1e9,1e9,-1e9];for(const q of P){LB[0]=Math.min(LB[0],q[0]);LB[1]=Math.max(LB[1],q[0]);LB[2]=Math.min(LB[2],q[1]);LB[3]=Math.max(LB[3],q[1]);}{const ex=.0003;LB[0]-=ex;LB[1]+=ex;LB[2]-=ex;LB[3]+=ex;}
  for(const tk of tiles){const [ax,ay]=tk.split(',').map(Number);let L3;try{L3=await layersOf(ax,ay);}catch(e){continue;}const T3=L3.transportation;if(!T3)continue;
   for(const F of T3.feats){if(F.type!==2)continue;const p3=props(T3,F);if(p3.brunnel==='bridge'||p3.brunnel==='tunnel'||/_construction|ferry|aerialway|pier/.test(p3.class||''))continue;
    const c3=p3.class,clr=/rail/.test(c3)?6.2:c3==='transit'?5.6:c3==='path'?3:4.9,wid=/^(motorway|trunk|primary)$/.test(c3)?9:/rail|transit/.test(c3)?4:c3==='path'?2:6;
-   for(const Q of rings(F.geom)){const ql=Q.map(toLL(ax,ay,T3.extent)).map(xm);
-    for(let a=0;a<ql.length-1;a++){const A=ql[a],B=ql[a+1];
+   if(!F._ll)F._ll=rings(F.geom).map(Q=>Q.map(toLL(ax,ay,T3.extent)));// csempénként egyszer dekódolva (eddig minden híd újra dekódolta)
+   let fb=F._bb;if(!fb){fb=[1e9,-1e9,1e9,-1e9];for(const Q of F._ll)for(const q of Q){fb[0]=Math.min(fb[0],q[0]);fb[1]=Math.max(fb[1],q[0]);fb[2]=Math.min(fb[2],q[1]);fb[3]=Math.max(fb[3],q[1]);}F._bb=fb;}
+   if(fb[1]<LB[0]||fb[0]>LB[1]||fb[3]<LB[2]||fb[2]>LB[3])continue;
+   for(const Q0 of F._ll){const ql=Q0.map(xm);
+    for(let a=0;a<ql.length-1;a++){const A=ql[a],B=ql[a+1];if(Math.max(A[0],B[0])<MB[0]||Math.min(A[0],B[0])>MB[1]||Math.max(A[1],B[1])<MB[2]||Math.min(A[1],B[1])>MB[3])continue;
      for(let b=0;b<BP.length-1;b++){const C=BP[b],D=BP[b+1],r1=[B[0]-A[0],B[1]-A[1]],r2=[D[0]-C[0],D[1]-C[1]],den=r1[0]*r2[1]-r1[1]*r2[0];if(Math.abs(den)<1e-6)continue;
       const t=((C[0]-A[0])*r2[1]-(C[1]-A[1])*r2[0])/den,u=((C[0]-A[0])*r1[1]-(C[1]-A[1])*r1[0])/den;if(t<0||t>1||u<0||u>1)continue;
       const sc=(b+u)*ds;if(sc<.5||sc>L-.5)continue;const sn=Math.abs(den)/(Math.hypot(...r1)*Math.hypot(...r2)||1),half=wid/2/Math.max(.35,sn)+1.5,ix=A[0]+r1[0]*t,iz=A[1]+r1[1]*t,lon=o0[0]+ix/kx,lat=o0[1]+iz/ky,need=sAt(lat,lon)+clr;

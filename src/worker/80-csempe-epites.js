@@ -484,7 +484,8 @@ async function build(tx,ty,g,rebuild){
  function rampFor(P0,D0,rail,hw,isP){isP=!!isP;if(!ENDS.length)return null;const P=[],D=[];for(let i=0;i<P0.length;i++){if(i){const a=P0[i-1],b=P0[i],l=D0[i]-D0[i-1],m=Math.floor(l/6);for(let q=1;q<=m;q++){const f=q/(m+1);P.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);D.push(D0[i-1]+l*f);}}P.push(P0[i]);D.push(D0[i]);}
   const n=P.length,r=new Float64Array(n).fill(-1e9);let any=false,g=.05;
   // a rámpa csak arra az útra hat, amelyik ténylegesen a hídvégnél kezdődik/halad át (a híd tengelyében), és az út mentén mért távolsággal ereszkedik — a párhuzamos szomszéd utakat nem emeli meg
-  for(const e of ENDS){if(e.rail!==rail||(!rail&&!!e.path!==isP))continue;let bi=-1,bd=hw+4;
+  let lx0=1e9,lx1=-1e9,lz0=1e9,lz1=-1e9;for(const q of P0){if(q[0]<lx0)lx0=q[0];if(q[0]>lx1)lx1=q[0];if(q[1]<lz0)lz0=q[1];if(q[1]>lz1)lz1=q[1];}const mg=hw+4;
+  for(const e of ENDS){if(e.rail!==rail||(!rail&&!!e.path!==isP))continue;if(e.x<lx0-mg||e.x>lx1+mg||e.z<lz0-mg||e.z>lz1+mg)continue;let bi=-1,bd=hw+4;
    for(let i=0;i<n;i++){const d=Math.hypot(P[i][0]-e.x,P[i][1]-e.z);if(d>=bd)continue;const a=P[Math.max(0,i-1)],b=P[Math.min(n-1,i+1)];let tx2=b[0]-a[0],tz2=b[1]-a[1];const tl=Math.hypot(tx2,tz2)||1;if(Math.abs((tx2*e.dx+tz2*e.dz)/tl)<.8)continue;bd=d;bi=i;}
    if(bi<0)continue;for(let i=0;i<n;i++){const sv=Math.abs(D[i]-D[bi]);if(sv>e.len)continue;const v=e.h-e.g*sv;if(v>r[i]){r[i]=v;any=true;g=e.g;}}}
   if(!any)return null;for(let i=1;i<n;i++)r[i]=Math.max(r[i],r[i-1]-g*(D[i]-D[i-1]));for(let i=n-2;i>=0;i--)r[i]=Math.max(r[i],r[i+1]-g*(D[i+1]-D[i]));
@@ -506,7 +507,7 @@ async function build(tx,ty,g,rebuild){
  const offR=pr=>[.16,.14,.07][pr.class==='path'?2:/^(motorway|trunk|primary|secondary|tertiary)$/.test(pr.class)?0:1];
  for(const l of roadL){l.D=cum(l.L);l.rf=rampFor(l.L,l.D,false,roadW(l.pr)/2,l.pr.class==='path');}
  {const add=[];for(const l of roadL){if(!l.rf)continue;const P=l.L;
-   for(const o of roadL){if(o===l)continue;const Q=o.L;let ox0=1e9,ox1=-1e9,oz0=1e9,oz1=-1e9;for(const q of Q){ox0=Math.min(ox0,q[0]);ox1=Math.max(ox1,q[0]);oz0=Math.min(oz0,q[1]);oz1=Math.max(oz1,q[1]);}
+   for(const o of roadL){if(o===l)continue;const Q=o.L;if(!o.bb){let a0=1e9,a1=-1e9,c0=1e9,c1=-1e9;for(const q of Q){a0=Math.min(a0,q[0]);a1=Math.max(a1,q[0]);c0=Math.min(c0,q[1]);c1=Math.max(c1,q[1]);}o.bb=[a0,a1,c0,c1];}const [ox0,ox1,oz0,oz1]=o.bb;if(!l.bb){let a0=1e9,a1=-1e9,c0=1e9,c1=-1e9;for(const q of P){a0=Math.min(a0,q[0]);a1=Math.max(a1,q[0]);c0=Math.min(c0,q[1]);c1=Math.max(c1,q[1]);}l.bb=[a0,a1,c0,c1];}if(l.bb[1]<ox0-2||l.bb[0]>ox1+2||l.bb[3]<oz0-2||l.bb[2]>oz1+2)continue;
     for(let i=0;i<P.length-1;i++){const A=P[i],B=P[i+1];if(Math.max(A[0],B[0])<ox0-2||Math.min(A[0],B[0])>ox1+2||Math.max(A[1],B[1])<oz0-2||Math.min(A[1],B[1])>oz1+2)continue;
      for(let j=0;j<Q.length-1;j++){const C=Q[j],Dd=Q[j+1],r1=[B[0]-A[0],B[1]-A[1]],r2=[Dd[0]-C[0],Dd[1]-C[1]],den=r1[0]*r2[1]-r1[1]*r2[0];if(Math.abs(den)<1e-6)continue;
       const t=((C[0]-A[0])*r2[1]-(C[1]-A[1])*r2[0])/den,u=((C[0]-A[0])*r1[1]-(C[1]-A[1])*r1[0])/den,l1=Math.hypot(...r1)||1,l2=Math.hypot(...r2)||1;if(t<-1.5/l1||t>1+1.5/l1||u<-1.5/l2||u>1+1.5/l2)continue;
@@ -735,10 +736,13 @@ async function build(tx,ty,g,rebuild){
    flush();}}}
  /* talaj */
  const GV=G+1,nV=GV*GV,gp=[],gc=[],gu=[],gi=[];let hsum=0;
+ // térbeli rács a földhasználati poligonokhoz és a folyószakaszokhoz (eddig minden rácspont az összeset végignézte)
+ const PGR=new Map(),RGR=new Map();polys.forEach((P,pi)=>{for(let gx=Math.floor(P.b[0]/64);gx<=Math.floor(P.b[2]/64);gx++)for(let gz=Math.floor(P.b[1]/64);gz<=Math.floor(P.b[3]/64);gz++){const k=gx*100003+gz;let l=PGR.get(k);if(!l)PGR.set(k,l=[]);l.push(pi);}});
+ for(const s2 of rivSeg){const w2=s2[4];for(let gx=Math.floor((Math.min(s2[0],s2[2])-w2)/64);gx<=Math.floor((Math.max(s2[0],s2[2])+w2)/64);gx++)for(let gz=Math.floor((Math.min(s2[1],s2[3])-w2)/64);gz<=Math.floor((Math.max(s2[1],s2[3])+w2)/64);gz++){const k=gx*100003+gz;let l=RGR.get(k);if(!l)RGR.set(k,l=[]);l.push(s2);}}
  for(let r=0;r<=G;r++)for(let c=0;c<=G;c++){const lon=fx2lon(tx+c/G),lat=fy2lat(ty+r/G),x=X(lon),z=Zf(lat),y=hg[r*W+c];
   gp.push(x,y,z);gu.push(x/8,z/8);hsum+=y;
-  let col=C.grass;for(const P of polys){if(x<P.b[0]||x>P.b[2]||z<P.b[1]||z>P.b[3])continue;if(pip(x,z,P)){col=P.k.c;break;}}
-  if(wm[r*W+c])col=C.water;for(const s2 of rivSeg)if(segD(x,z,s2[0],s2[1],s2[2],s2[3])<s2[4]){col=C.water;break;}
+  let col=C.grass;const pl=PGR.get(Math.floor(x/64)*100003+Math.floor(z/64));if(pl)for(const pi of pl){const P=polys[pi];if(x<P.b[0]||x>P.b[2]||z<P.b[1]||z>P.b[3])continue;if(pip(x,z,P)){col=P.k.c;break;}}
+  if(wm[r*W+c])col=C.water;else{const rl=RGR.get(Math.floor(x/64)*100003+Math.floor(z/64));if(rl)for(const s2 of rl)if(segD(x,z,s2[0],s2[1],s2[2],s2[3])<s2[4]){col=C.water;break;}}
   const jt=.95+rnd()*.07;gc.push(col[0]*jt,col[1]*jt,col[2]*jt);}
  for(let r=0;r<G;r++)for(let c=0;c<G;c++){const a=r*GV+c,b=a+1,d=a+GV,f=d+1;gi.push(a,d,b,b,d,f);}
  const sk=(i0,step,n)=>{for(let k=0;k<n;k++){const a=i0+k*step,b=a+step,va=gp.length/3;
