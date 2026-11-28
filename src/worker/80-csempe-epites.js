@@ -720,9 +720,19 @@ async function build(tx,ty,g,rebuild){
  const MH=(x,z)=>{const cf=(lon2fx(LO+x/ML)-tx)*G,rf2=(lat2fy(LA-z/MLAT)-ty)*G;if(cf<0||rf2<0||cf>G||rf2>G)return H(x,z);const c=Math.min(G-1,Math.floor(cf)),r=Math.min(G-1,Math.floor(rf2)),u=cf-c,v=rf2-r,W1=G+1,a=hg[r*W1+c],b=hg[r*W1+c+1],d=hg[(r+1)*W1+c],f=hg[(r+1)*W1+c+1];
   return u+v<=1?a+(b-a)*u+(d-a)*v:f+(d-f)*(1-u)+(b-f)*(1-v);};
  // épületek a végső terepre: az alap a körvonal alatti legalacsonyabb megjelenített terepszint (a fal úgyis 0,8 m-rel lejjebb indul)
- for(const B of BTR){let m2=1e9;for(const q of B.O)m2=Math.min(m2,MH(q[0],q[1]));const d=m2-B.mn;if(!(Math.abs(d)>.03)||Math.abs(d)>40)continue;
-  BBUF.forEach((b,i)=>{const P=b.p;for(let k=B.m.l[i];k<B.e.l[i];k+=3)P[k+1]+=d;});for(let k=B.m.s;k<B.e.s;k+=9)SHS[k+1]+=d;for(let k=B.m.f;k<B.e.f;k+=8){FAC[k+4]+=d;FAC[k+5]+=d;}for(let k=B.m.c;k<B.e.c;k+=6){cseg[k+4]+=d;cseg[k+5]+=d;}}
+ // lejtőn: az épület törzse a körvonal alatti terep közepéhez igazodik (legfeljebb 4 m-rel a legalacsonyabb pont fölé), a falak alja a legalacsonyabb pont alá ér – talapzat, se lebegés, se félig elsüllyedt ház
+ for(const B of BTR){let m2=1e9,m3=-1e9;for(const q of B.O){const h=MH(q[0],q[1]);m2=Math.min(m2,h);m3=Math.max(m3,h);}const base=m2+Math.min(4,Math.max(0,(m3-m2)*.5)),d=base-B.mn,bot=B.mn-.8,nb=m2-.8;if(!(Math.abs(d)>.03)||Math.abs(d)>40)continue;
+  BBUF.forEach((b,i)=>{const P=b.p;for(let k=B.m.l[i];k<B.e.l[i];k+=3){if(Math.abs(P[k+1]-bot)<.02)P[k+1]=nb;else P[k+1]+=d;}});for(let k=B.m.s;k<B.e.s;k+=9)SHS[k+1]+=d;for(let k=B.m.f;k<B.e.f;k+=8){FAC[k+4]+=d;FAC[k+5]+=d;}for(let k=B.m.c;k<B.e.c;k+=6){cseg[k+4]=Math.abs(cseg[k+4]-bot)<.02?nb:cseg[k+4]+d;cseg[k+5]+=d;}}
  for(let k=0;k<SG.length;k+=5)SG[k+1]=MH(SG[k],SG[k+2]);// jelzőlámpák a végső terepen
+ // rakpart- és partperem: ahol a part (a vízfelület szélétől 1 m-re) több mint 1,2 m-rel a víz felett van, alacsony kőperem (és ütközőfal) kerül a szélére – nem lehet beleesni a folyóba
+ for(const w of waters){const rings=[w.o,...w.h];for(const R0 of rings){const n=R0.length;for(let k=0;k<n;k++){const a=R0[k],b=R0[(k+1)%n],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<.5)continue;const ux=(b[0]-a[0])/L,uz=(b[1]-a[1])/L;
+   let seg=null;const flush=()=>{if(seg&&seg.n>=2){const [x0,z0,y0,g0]=seg.s,[x1,z1,y1,g1]=seg.e,lo=Math.min(y0,y1)-.4,top0=g0+.7,top1=g1+.7;quad(BX,[x0,lo,z0],[x1,lo,z1],[x1,top1,z1],[x0,top0,z0],[seg.nx,0,seg.nz],[.66,.64,.6]);quad(BX,[x1,lo,z1],[x0,lo,z0],[x0,top0,z0],[x1,top1,z1],[-seg.nx,0,-seg.nz],[.66,.64,.6]);cseg.push(x0,z0,x1,z1,lo,Math.max(top0,top1));}seg=null;};
+   for(let t=0;t<=L;t+=3){const px=a[0]+ux*Math.min(t,L),pz=a[1]+uz*Math.min(t,L);if(!inE(px,pz,0)){flush();continue;}
+    let nx=-uz,nz=ux;const tst=(sx)=>pip(px+nx*sx,pz+nz*sx,w);if(tst(1)&&!tst(-1)){nx=-nx;nz=-nz;}else if(tst(1)===tst(-1)){flush();continue;}
+    const lx=px+nx*.9,lz=pz+nz*.9;if(onRoad(px+nx*.2,pz+nz*.2,0)||waters.some(o=>o!==w&&pip(lx,lz,o))){flush();continue;}
+    const wl=w.big?waterLvl(LA-pz/MLAT,LO+px/ML):w.lvl,g=MH(lx,lz),gfar=Math.max(g,MH(px+nx*4,pz+nz*4),MH(px+nx*10,pz+nz*10));if(!(gfar-wl>1.5||onRoad(px+nx*6,pz+nz*6,6))){flush();continue;}
+    const wx=px+nx*.15,wz=pz+nz*.15;if(!seg)seg={s:[wx,wz,wl,g],n:1,nx,nz};else{seg.e=[wx,wz,wl,g];seg.n++;if(seg.n>=4){flush();seg={s:[wx,wz,wl,g],n:1,nx,nz};}}}
+   flush();}}}
  /* talaj */
  const GV=G+1,nV=GV*GV,gp=[],gc=[],gu=[],gi=[];let hsum=0;
  for(let r=0;r<=G;r++)for(let c=0;c<=G;c++){const lon=fx2lon(tx+c/G),lat=fy2lat(ty+r/G),x=X(lon),z=Zf(lat),y=hg[r*W+c];
