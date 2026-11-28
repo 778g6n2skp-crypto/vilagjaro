@@ -7,6 +7,7 @@ wk.onmessage=e=>{const m=e.data;
  if(m.t==='status'){status(m.msg,5);return;}
  if(m.t==='fail'){if(m.gen!==gen)return;const ch=chunks.get(m.tx+','+m.ty);if(ch&&ch.state==='loading'){inflight--;ch.state='failed';ch.retry=performance.now()+6000;status('Egy térképrész nem töltött be, újrapróbálom.',4);}return;}
  if(m.t==='detail'){if(m.gen!==gen)return;const ch=chunks.get(m.tx+','+m.ty);if(ch&&ch.state==='ready'&&!ch.rebuilding){ch.rebuilding=true;wk.postMessage({t:'chunk',tx:m.tx,ty:m.ty,gen,rebuild:1});}return;}
+ if(m.t==='memdbg'){window.__memdbg=m.s;return;}
  if(m.t==='chunk')onChunk(m);};
 function tileRect(tx,ty){const a=toXZ(fy2lat(ty),fx2lon(tx)),b=toXZ(fy2lat(ty+1),fx2lon(tx+1));return[a[0],a[1],b[0],b[1]];}
 const rectD=(r,x,z)=>Math.hypot(Math.max(r[0]-x,0,x-r[2]),Math.max(r[1]-z,0,z-r[3]));

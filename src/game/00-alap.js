@@ -9,7 +9,9 @@ import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 const VERSION='__VERSION__';// a build.mjs tölti ki a VERSION fájlból
 
 const MLAT=110574,TZ=14,NT=1<<TZ,G=256,CELL=20,RS=14;
-const LOAD_R=950,LOOK_R=500,UNLOAD_R=2300,MAXF=5;
+// telefonon jóval kisebb betöltési/megtartási sugár: egy z14 csempe ~1,6 km, a régi 2,3 km-es megtartással 8-9 csempe maradt a memóriában (iOS ettől újratölti a lapot)
+const MOBILE=(matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>1)&&!matchMedia('(pointer:fine)').matches;
+const LOAD_R=MOBILE?600:950,LOOK_R=MOBILE?320:500,UNLOAD_R=MOBILE?1050:2300,MAXF=MOBILE?2:5;
 let lat0=47.50320,lon0=19.06010,mlon=111320*Math.cos(lat0*Math.PI/180),gen=1;
 /* bal oldali közlekedés országai (durva határolódobozok, a szomszéd jobbos országokat kizárva) */
 function leftHand(la,lo){const B=(a,b,c,d)=>la>=a&&la<=b&&lo>=c&&lo<=d;

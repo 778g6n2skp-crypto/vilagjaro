@@ -40,7 +40,7 @@ function applyCfg(k){if(k==='quality'||k==null){quality=CFG.quality;applyQuality
  if((k==='police'||k==null)&&!CFG.police){wanted=0;while(police.length)dropPolice(0);}
  if(k==='radio'&&au)radioMsg();
  $('mini').classList.toggle('hide',!CFG.mini);
- if(k==null||k==='mly'||k==='mlyOn'){wk.postMessage({t:'cfg',mly:CFG.mlyOn?CFG.mly:''});mly.err='';if(k){mly.done.clear();if(CFG.mlyOn&&CFG.mly){for(const ch of chunks.values())if(ch.state==='ready')wk.postMessage({t:'chunk',tx:ch.tx,ty:ch.ty,gen,rebuild:1});}}}}
+ if(k==null||k==='mly'||k==='mlyOn'){wk.postMessage({t:'cfg',mly:CFG.mlyOn?CFG.mly:'',lowmem:MOBILE});mly.err='';if(k){mly.done.clear();if(CFG.mlyOn&&CFG.mly){for(const ch of chunks.values())if(ch.state==='ready')wk.postMessage({t:'chunk',tx:ch.tx,ty:ch.ty,gen,rebuild:1});}}}}
 function toggleSettings(){setOpen=!setOpen;$('settings').classList.toggle('hide',!setOpen);keys.clear();if(setOpen){buildSettings();diag();}else $('c').focus();}
 // diagnosztika a beállítások alján: ha telefonon valami nem jó, ebből látszik, hol akad el
 function diag(){let el=$('diag');if(!el){el=document.createElement('div');el.id='diag';el.style.cssText='font:600 11px ui-monospace,monospace;opacity:.6;margin-top:14px;white-space:pre-wrap';$('setbody').after(el);}

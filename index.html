@@ -173,7 +173,7 @@ const fx2lon=fx=>fx/NT*360-180;
 const fy2lat=fy=>Math.atan(Math.sinh(Math.PI*(1-2*fy/NT)))*180/Math.PI;
 
 /* ---------- domborzat ---------- */
-let DEMDEC='';const DZ=14,tilesP=new Map(),tileD=new Map();let fb=null,fbS=0,fbN=0,demMiss=false;
+let DEMDEC='',LOWMEM=false;const DZ=14,tilesP=new Map(),tileD=new Map();let fb=null,fbS=0,fbN=0,demMiss=false;
 function dxy(lat,lon){const n=1<<DZ;return[lon2fx(lon)/NT*n,lat2fy(lat)/NT*n];}
 // saját PNG-dekóder a domborzati csempékhez: bájtpontos, böngészőtől és színkezeléstől független (iPhone-on is)
 async function pngRGB(B){if(typeof DecompressionStream==='undefined')return null;const dv=new DataView(B.buffer,B.byteOffset,B.byteLength);if(dv.getUint32(0)!==0x89504e47)return null;
@@ -206,7 +206,7 @@ function loadDem(x,y){const k=x+'/'+y;let p=tilesP.get(k);if(p)return p;
   const h=new Float32Array(65536);let s=0;
   for(let i=0;i<65536;i++){h[i]=px[i*3]*256+px[i*3+1]+px[i*3+2]/256-32768;s+=h[i];}
   despike(h);s=0;for(let i=0;i<65536;i++)s+=h[i];
-  fbS+=s/65536;fbN++;fb=fbS/fbN;tileD.set(k,h);if(tileD.size>120){const k0=tileD.keys().next().value;tileD.delete(k0);tilesP.delete(k0);}return h;}catch(e){await sleep(600*(a+1));}}tileD.set(k,null);return null;})();
+  fbS+=s/65536;fbN++;fb=fbS/fbN;tileD.set(k,h);if(tileD.size>(LOWMEM?40:120)){const k0=tileD.keys().next().value;tileD.delete(k0);tilesP.delete(k0);}return h;}catch(e){await sleep(600*(a+1));}}tileD.set(k,null);return null;})();
  tilesP.set(k,p);return p;}
 function dem(lat,lon){const f=dxy(lat,lon),tx=Math.floor(f[0]),ty=Math.floor(f[1]),k=tx+'/'+ty;
  if(!tileD.has(k)){demMiss=true;return fb==null?0:fb;}const h=tileD.get(k);if(!h)return fb==null?0:fb;
@@ -216,7 +216,7 @@ const rmemo=new Map(),memo=new Map();
 function rawL(a,b){const k=a*4e7+b;let v=rmemo.get(k);if(v!==undefined)return v;
  const lon=fx2lon(a/G),lat=fy2lat(b/G);demMiss=false;
  v=(dem(lat,lon)*4+dem(lat+5e-5,lon)+dem(lat-5e-5,lon)+dem(lat,lon+7e-5)+dem(lat,lon-7e-5))/8;
- if(!demMiss){if(rmemo.size>400000)rmemo.clear();rmemo.set(k,v);}return v;}
+ if(!demMiss){if(rmemo.size>(LOWMEM?120000:400000))rmemo.clear();rmemo.set(k,v);}return v;}
 const CTG=new Map();
 function latH(a,b){const tx=Math.floor(a/G),ty=Math.floor(b/G),h=CTG.get(tx*100000+ty);if(h){const c=a-tx*G,r=b-ty*G;return h[r*(G+1)+c];}return rawL(a,b);}
 const bil=(f,lat,lon)=>{const gx=lon2fx(lon)*G,gy=lat2fy(lat)*G,a=Math.floor(gx),b=Math.floor(gy),u=gx-a,v=gy-b;return(f(a,b)*(1-u)+f(a+1,b)*u)*(1-v)+(f(a,b+1)*(1-u)+f(a+1,b+1)*u)*v;};
@@ -233,7 +233,7 @@ const smemo=new Map();
 function sL(a,b){const k=a*4e7+b;let v=smemo.get(k);if(v!==undefined)return v;const vals=[];let miss=false;
  for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){demMiss=false;vals.push(rawL(a+i,b+j));if(demMiss)miss=true;}
  vals.sort((x,y)=>x-y);let t=0;for(let i=3;i<18;i++)t+=vals[i];v=t/15;
- if(!miss){if(smemo.size>400000)smemo.clear();smemo.set(k,v);}return v;}
+ if(!miss){if(smemo.size>(LOWMEM?120000:400000))smemo.clear();smemo.set(k,v);}return v;}
 const sAt=(lat,lon)=>bil(sL,lat,lon);
 function demBox(s,n,w,e){const a=dxy(n,w),b=dxy(s,e),p=[];for(let x=Math.floor(a[0]);x<=Math.floor(b[0]);x++)for(let y=Math.floor(a[1]);y<=Math.floor(b[1]);y++)p.push(loadDem(x,y));return Promise.all(p);}
 
@@ -308,7 +308,7 @@ function sideOf(t){const yes=v=>v==='yes'||v==='both'||v==='left'||v==='right';l
 
 /* ---------- csempe-adat gyorsítótár ---------- */
 const lcache=new Map();
-function layersOf(x,y){const k=x+','+y;let p=lcache.get(k);if(!p){p=getTile(x,y).then(b=>b.byteLength?readMVT(b):{});lcache.set(k,p);p.catch(()=>lcache.delete(k));if(lcache.size>48)lcache.delete(lcache.keys().next().value);}return p;}
+function layersOf(x,y){const k=x+','+y;let p=lcache.get(k);if(!p){p=getTile(x,y).then(b=>b.byteLength?readMVT(b):{});lcache.set(k,p);p.catch(()=>lcache.delete(k));if(lcache.size>(LOWMEM?20:48))lcache.delete(lcache.keys().next().value);}return p;}
 function polyGroups(R){const out=[];let sign=0,cur=null;for(let r of R){if(r.length>1&&r[0][0]===r[r.length-1][0]&&r[0][1]===r[r.length-1][1])r=r.slice(0,-1);if(r.length<3)continue;
  const A=area(r);if(Math.abs(A)<1)continue;if(!sign)sign=Math.sign(A);if(Math.sign(A)===sign){cur={o:r,h:[]};out.push(cur);}else if(cur)cur.h.push(r);}return out;}
 
@@ -345,9 +345,9 @@ function correctTile(tx,ty){const key=tx+','+ty;let pr=ctCache.get(key);if(pr)re
    for(let r=1;r<G;r++)for(let c=1;c<G;c++){const i=r*W+c,d=best[i];if(d>cm+3)continue;const road=sL(tx*G+c,ty*G+r)-.08;
     const dh=h[i]-road;h[i]=d<=3?road:road+Math.max(-(d-3)*.5,Math.min((d-3)*.4,dh));}}
   // a korrigált rács csempénként, tömbben tárolva (Map-bejegyzések helyett: töredék memória, iPhone-on nem fogy el)
-  CTG.set(tx*100000+ty,h);if(CTG.size>40)CTG.delete(CTG.keys().next().value);
+  CTG.set(tx*100000+ty,h);if(CTG.size>(LOWMEM?16:40))CTG.delete(CTG.keys().next().value);
   return{h,wm};})();
- ctCache.set(key,pr);pr.catch(()=>ctCache.delete(key));if(ctCache.size>30)ctCache.delete(ctCache.keys().next().value);return pr;}
+ ctCache.set(key,pr);pr.catch(()=>ctCache.delete(key));if(ctCache.size>(LOWMEM?12:30))ctCache.delete(ctCache.keys().next().value);return pr;}
 
 /* ---------- hidak: a szomszéd csempékből összefűzött teljes híd, egyenletes pályaprofil ---------- */
 const isEdge=(q,E)=>q[0]<=1||q[0]>=E-1||q[1]<=1||q[1]>=E-1;
@@ -1243,7 +1243,8 @@ function mlySigns(tx,ty){const k=tx+','+ty;let p=mCache.get(k);if(p)return p;
  mCache.set(k,p);if(mCache.size>80)mCache.delete(mCache.keys().next().value);return p;}
 const signCode=v=>{const m=/maximum-speed-limit-(\d+)/.exec(v);if(m)return+m[1];if(/--stop--/.test(v))return 1001;if(/yield|give-way/.test(v))return 1002;if(/no-entry/.test(v))return 1003;if(/pedestrians-crossing|crosswalk-zebra/.test(v))return 1004;if(/priority-road/.test(v))return 1005;return 0;};
 self.onmessage=e=>{const m=e.data;
- if(m.t==='cfg'){MLY=m.mly||'';return;}
+ if(m.t==='cfg'){MLY=m.mly||'';if(m.lowmem)LOWMEM=true;return;}
+ if(m.t==='memdbg'){let dem=0;for(const v of tileD.values())if(v&&v.byteLength)dem+=v.byteLength;self.postMessage({t:'memdbg',s:{tilesP:tilesP.size,tileD:tileD.size,demMB:Math.round(dem/1e6),rmemo:rmemo.size,memo:memo.size,CTG:CTG.size,vmemo:vmemo.size,smemo:smemo.size,dCache:dCache.size,ctCache:ctCache.size,lcache:lcache.size,bpCache:bpCache.size,HOV:HOV.size,mCache:mCache.size,queue:queue.length}});return;}
  if(m.t==='hov'){const L=m.list;for(let i=0;i<L.length;i+=3)HOV.set(Math.round(L[i])+','+Math.round(L[i+1]),L[i+2]);return;}
  if(m.t==='init'){lat0=m.lat0;lon0=m.lon0;mlon=111320*Math.cos(lat0*Math.PI/180);queue.length=0;}
  else if(m.t==='chunk'){queue.push(m);if(!m.rebuild)prefetch(m.tx,m.ty);pump();}};
@@ -1260,10 +1261,12 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
-const VERSION='v18';// a build.mjs tölti ki a VERSION fájlból
+const VERSION='v18.1';// a build.mjs tölti ki a VERSION fájlból
 
 const MLAT=110574,TZ=14,NT=1<<TZ,G=256,CELL=20,RS=14;
-const LOAD_R=950,LOOK_R=500,UNLOAD_R=2300,MAXF=5;
+// telefonon jóval kisebb betöltési/megtartási sugár: egy z14 csempe ~1,6 km, a régi 2,3 km-es megtartással 8-9 csempe maradt a memóriában (iOS ettől újratölti a lapot)
+const MOBILE=(matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>1)&&!matchMedia('(pointer:fine)').matches;
+const LOAD_R=MOBILE?600:950,LOOK_R=MOBILE?320:500,UNLOAD_R=MOBILE?1050:2300,MAXF=MOBILE?2:5;
 let lat0=47.50320,lon0=19.06010,mlon=111320*Math.cos(lat0*Math.PI/180),gen=1;
 /* bal oldali közlekedés országai (durva határolódobozok, a szomszéd jobbos országokat kizárva) */
 function leftHand(la,lo){const B=(a,b,c,d)=>la>=a&&la<=b&&lo>=c&&lo<=d;
@@ -1589,6 +1592,7 @@ wk.onmessage=e=>{const m=e.data;
  if(m.t==='status'){status(m.msg,5);return;}
  if(m.t==='fail'){if(m.gen!==gen)return;const ch=chunks.get(m.tx+','+m.ty);if(ch&&ch.state==='loading'){inflight--;ch.state='failed';ch.retry=performance.now()+6000;status('Egy térképrész nem töltött be, újrapróbálom.',4);}return;}
  if(m.t==='detail'){if(m.gen!==gen)return;const ch=chunks.get(m.tx+','+m.ty);if(ch&&ch.state==='ready'&&!ch.rebuilding){ch.rebuilding=true;wk.postMessage({t:'chunk',tx:m.tx,ty:m.ty,gen,rebuild:1});}return;}
+ if(m.t==='memdbg'){window.__memdbg=m.s;return;}
  if(m.t==='chunk')onChunk(m);};
 function tileRect(tx,ty){const a=toXZ(fy2lat(ty),fx2lon(tx)),b=toXZ(fy2lat(ty+1),fx2lon(tx+1));return[a[0],a[1],b[0],b[1]];}
 const rectD=(r,x,z)=>Math.hypot(Math.max(r[0]-x,0,x-r[2]),Math.max(r[1]-z,0,z-r[3]));
@@ -1766,7 +1770,7 @@ function applyCfg(k){if(k==='quality'||k==null){quality=CFG.quality;applyQuality
  if((k==='police'||k==null)&&!CFG.police){wanted=0;while(police.length)dropPolice(0);}
  if(k==='radio'&&au)radioMsg();
  $('mini').classList.toggle('hide',!CFG.mini);
- if(k==null||k==='mly'||k==='mlyOn'){wk.postMessage({t:'cfg',mly:CFG.mlyOn?CFG.mly:''});mly.err='';if(k){mly.done.clear();if(CFG.mlyOn&&CFG.mly){for(const ch of chunks.values())if(ch.state==='ready')wk.postMessage({t:'chunk',tx:ch.tx,ty:ch.ty,gen,rebuild:1});}}}}
+ if(k==null||k==='mly'||k==='mlyOn'){wk.postMessage({t:'cfg',mly:CFG.mlyOn?CFG.mly:'',lowmem:MOBILE});mly.err='';if(k){mly.done.clear();if(CFG.mlyOn&&CFG.mly){for(const ch of chunks.values())if(ch.state==='ready')wk.postMessage({t:'chunk',tx:ch.tx,ty:ch.ty,gen,rebuild:1});}}}}
 function toggleSettings(){setOpen=!setOpen;$('settings').classList.toggle('hide',!setOpen);keys.clear();if(setOpen){buildSettings();diag();}else $('c').focus();}
 // diagnosztika a beállítások alján: ha telefonon valami nem jó, ebből látszik, hol akad el
 function diag(){let el=$('diag');if(!el){el=document.createElement('div');el.id='diag';el.style.cssText='font:600 11px ui-monospace,monospace;opacity:.6;margin-top:14px;white-space:pre-wrap';$('setbody').after(el);}
@@ -2389,7 +2393,7 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/
  perfTick(dt);}
 applyCfg();let autoT=0;setInterval(()=>{if(CFG.autoTime){const k=autoTimeIdx();if(k!==tIdx){tIdx=(k+TIMES.length-1)%TIMES.length;nextTime();}}},5000);
 requestAnimationFrame(loop);
-window.__vj={surfDbg,colTop,meshSurf,TST,surfaceAt,SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
+window.__vj={memdbg:()=>wk.postMessage({t:'memdbg'}),surfDbg,colTop,meshSurf,TST,surfaceAt,SP,mly,THREE_TL:THREE.TextureLoader,THREE_Basic:THREE.MeshBasicMaterial,scene,camera,renderer,terrainH,PH,phProject,PHS,phRebuild,car,chunks,inp,keys,traffic,trams,status:()=>statusEl.textContent,sim:t=>{for(let k=0;k<t*120;k++){physics(1/120);if(k%2===0){updateCar(1/60);updSignals(1/60);updPolice(1/60);updTraffic(1/60);updTrams(1/60);}}updateCam(1);},
  time:k=>{tIdx=k;tK=1;Object.assign(tCur,pack(TIMES[k]));applyTime(0);},setRoute,toggleMap,get route(){return route;},crime:(n,m)=>crime(n,m),police,physics,GB,setCar:i=>setCar(i,carCol),jump:(a,b)=>jump(a,b,"teszt"),startMission,get wanted(){return wanted;},lightState,toLL,toXZ};
 try{$('ver').textContent='Világjáró '+VERSION;}catch(e){}
 </script>

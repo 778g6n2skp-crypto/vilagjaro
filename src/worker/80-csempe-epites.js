@@ -787,7 +787,8 @@ function mlySigns(tx,ty){const k=tx+','+ty;let p=mCache.get(k);if(p)return p;
  mCache.set(k,p);if(mCache.size>80)mCache.delete(mCache.keys().next().value);return p;}
 const signCode=v=>{const m=/maximum-speed-limit-(\d+)/.exec(v);if(m)return+m[1];if(/--stop--/.test(v))return 1001;if(/yield|give-way/.test(v))return 1002;if(/no-entry/.test(v))return 1003;if(/pedestrians-crossing|crosswalk-zebra/.test(v))return 1004;if(/priority-road/.test(v))return 1005;return 0;};
 self.onmessage=e=>{const m=e.data;
- if(m.t==='cfg'){MLY=m.mly||'';return;}
+ if(m.t==='cfg'){MLY=m.mly||'';if(m.lowmem)LOWMEM=true;return;}
+ if(m.t==='memdbg'){let dem=0;for(const v of tileD.values())if(v&&v.byteLength)dem+=v.byteLength;self.postMessage({t:'memdbg',s:{tilesP:tilesP.size,tileD:tileD.size,demMB:Math.round(dem/1e6),rmemo:rmemo.size,memo:memo.size,CTG:CTG.size,vmemo:vmemo.size,smemo:smemo.size,dCache:dCache.size,ctCache:ctCache.size,lcache:lcache.size,bpCache:bpCache.size,HOV:HOV.size,mCache:mCache.size,queue:queue.length}});return;}
  if(m.t==='hov'){const L=m.list;for(let i=0;i<L.length;i+=3)HOV.set(Math.round(L[i])+','+Math.round(L[i+1]),L[i+2]);return;}
  if(m.t==='init'){lat0=m.lat0;lon0=m.lon0;mlon=111320*Math.cos(lat0*Math.PI/180);queue.length=0;}
  else if(m.t==='chunk'){queue.push(m);if(!m.rebuild)prefetch(m.tx,m.ty);pump();}};
